@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-Opening
-=======
 Closed
->>>>>>> tmp

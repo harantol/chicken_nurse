@@ -5,5 +5,5 @@ import chicken_door as door
 
 #quit()
 door.init()
-door.close_door()
+door.force_close_door()
 door.exit_door()
