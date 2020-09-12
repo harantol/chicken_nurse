@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #raspberry_0w_chickencoop
 
 ## install Debian 9
@@ -75,3 +76,6 @@ de fermeture la porte :
 https://www.domoticz.com/wiki/Domoticz_API/JSON_URL%27s#Text_sensor*
 crééer un device virtuel (dummies) de type texte
 
+=======
+Inspired from https://github.com/fz3p/chickencoop
+>>>>>>> tmp
