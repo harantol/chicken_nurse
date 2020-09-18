@@ -8,13 +8,13 @@ import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-TIME_UP = 15
-TIME_DOWN = 16
+TIME_UP = 24
+TIME_DOWN = 21
 FILENAME = os.path.join(dir_path, "status.txt")
 LOGFILE = os.path.join(dir_path, "chicken.log")
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
 # Motor A, Left Side GPIO CONSTANTS
-PWM_FORWARD_LEFT_PIN = 13  # IN1 - Forward Drive
+PWM_FORWARD_LEFT_PIN = 19  # IN1 - Forward Drive
 PWM_REVERSE_LEFT_PIN = 26  # IN2 - Reverse Drive
 
 def init():
