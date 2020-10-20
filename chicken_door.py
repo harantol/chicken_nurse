@@ -8,8 +8,8 @@ import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-TIME_UP = 24
-TIME_DOWN = 21
+TIME_UP = 25
+TIME_DOWN = 22
 FILENAME = os.path.join(dir_path, "status.txt")
 LOGFILE = os.path.join(dir_path, "chicken.log")
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
