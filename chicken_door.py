@@ -8,7 +8,7 @@ import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-TIME_UP = 25
+TIME_UP = 30
 TIME_DOWN = 22
 FILENAME = os.path.join(dir_path, "status.txt")
 LOGFILE = os.path.join(dir_path, "chicken.log")
