@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
-from chicken_door import ChickenDoor
+import chicken_door as door
 
 #quit()
-door = ChickenDoor()
-
+door.init()
 door.open_door()
 door.exit_door()
