@@ -12,7 +12,7 @@ from gpiozero import PWMOutputDevice
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 TIME_UP = 45
-TIME_DOWN = 36
+TIME_DOWN = 38
 FILENAME = os.path.join(dir_path, "status.txt")
 LOGFILE = os.path.join(dir_path, "chicken.log")
 # ///////////////// Define Motor Driver GPIO Pins /////////////////

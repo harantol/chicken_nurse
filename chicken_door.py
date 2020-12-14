@@ -8,14 +8,14 @@ import os
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-TIME_UP = 5
-TIME_DOWN = 6
+TIME_UP = 30
+TIME_DOWN = 25
 FILENAME = os.path.join(dir_path, "status.txt")
 LOGFILE = os.path.join(dir_path, "chicken.log")
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
 # Motor A, Left Side GPIO CONSTANTS
-PWM_FORWARD_LEFT_PIN = 13  # IN1 - Forward Drive
-PWM_REVERSE_LEFT_PIN = 6  # IN2 - Reverse Drive
+PWM_FORWARD_LEFT_PIN = 19  # IN1 - Forward Drive
+PWM_REVERSE_LEFT_PIN = 26  # IN2 - Reverse Drive
 
 def init():
     gpio.setmode(gpio.BCM)
@@ -27,7 +27,7 @@ def init():
 
 
 def open_door():
-    if read_status() == "Closed":
+    if read_status() == "Closed" or read_status() == "Opening" :
         print("Status = closed")
         logging.info("DOOR Opening…")
         opening()
@@ -38,7 +38,7 @@ def open_door():
 
 
 def close_door():
-    if read_status() == "Opened":
+    if read_status() == "Opened" or read_status() == "Closing":
         print("Status = Opened")
         logging.info("DOOR Closing…")
         closing()
