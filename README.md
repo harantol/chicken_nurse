@@ -78,3 +78,4 @@ crééer un device virtuel (dummies) de type texte
 =======
 
 Inspired from https://github.com/fz3p/chickencoop
+Et de https://www.ladomotiquepourtous.fr/20180424/poulailler-connecte.html
