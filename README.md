@@ -41,6 +41,8 @@ sudo crontab -e
 # automatisation de l'ouverture et de la fermeture de la porte 
 
 ## installation de sunwait  
+### Depot github:
+https://github.com/risacher/sunwait
 ### téléchargement 
 `wget http://risacher.org/sunwait/sunwait-20041208.tar.gz`
 
