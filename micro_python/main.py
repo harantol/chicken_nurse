@@ -43,7 +43,10 @@ def get_sleep_time(loc_time = None):
         
 if __name__ == "__main__":
     loc = localtime()
-    loc = (2023, 12, 31, 21, 34, 0, 5, 273)
+    #loc = (2023, 12, 31, 21, 34, 0, 5, 273)
     print(f"il est {loc}")
     sleeptime, mode = get_sleep_time(loc_time = loc)
-    print(f"Prochaine {mode} à {time.gmtime(sleeptime + time.mktime(loc))}")
+    print(f"Prochaine {mode} à {time.gmtime(sleeptime + time.mktime(loc))} dodo pendant {sleeptime}s")
+    #picosleep.seconds(2)
+    time.sleep(sleeptime)
+    print(f"C'est l'heure ! {mode} à {localtime()}")
