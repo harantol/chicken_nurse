@@ -54,7 +54,7 @@ class Sun:
         """
         Calculate sunrise or sunset date.
         :param date: Reference date (localtime())
-        :param isRiseTime: True if you want to calculate sunrise time.
+        :param isrisetime: True if you want to calculate sunrise time.
         :param zenith: Sun reference zenith
         :return: UTC sunset or sunrise datetime
         :raises: SunTimeException when there is no sunrise and sunset on given location and date
@@ -105,7 +105,7 @@ class Sun:
 
         # 7a. calculate the Sun's local hour angle
         cosh = (math.cos(to_rad * zenith) - (sindec * math.sin(to_rad * self._lat))) / (
-                    cosdec * math.cos(to_rad * self._lat))
+                cosdec * math.cos(to_rad * self._lat))
 
         if cosh > 1:
             return None  # The sun never rises on this location (on the specified date)

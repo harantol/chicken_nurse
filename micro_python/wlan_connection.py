@@ -1,6 +1,7 @@
 import network
 import time
 
+
 def connnect():
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -17,4 +18,3 @@ def connnect():
     else:
         print('connected')
         print('IP: ', wlan.ifconfig()[0])
-
