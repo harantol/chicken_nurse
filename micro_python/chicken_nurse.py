@@ -1,9 +1,9 @@
 import datetime
 from datetime import date
-
+import picosleep
 from sun import Sun
 
-from machine import Pin
+from machine import Pin, RTC
 import time
 
 LATITUDE = 45.343167
@@ -104,7 +104,7 @@ class ChickenNurse:
         self.lon = LONGITUDE
         self.time_zone = TIME_ZONE
         self.sun_wait = Sun(lat=self.lat, lon=self.lon, tzone=self.time_zone)
-        self.MODES = ['Fermeture', 'Ouverture']
+        self.modes = ['Fermeture', 'Ouverture']
         self.debug_flag = True
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
@@ -115,8 +115,33 @@ class ChickenNurse:
             self.offset_sec = OFFSET_SEC
         self.led = Pin("LED", Pin.OUT)
         self.led.off()
+        self.log_txt = ""
+        self.clock = RTC()
 
-    def get_next_step_and_time(self, loc_time=None):
+    def run(self):
+        while True:
+            if not self.debug:
+                self.log_txt = ""
+            loc = time.localtime()
+            __text = f"Nous sommes le {self.__time_to_string(loc)}, la porte est {read_status()}\n"
+            print(__text)
+            self.log_txt += __text
+            if self.debug:
+                sleeptime, mode = self.__get_next_step_and_time_debug()
+            else:
+                sleeptime, mode = self.__get_next_step_and_time(loc_time=loc)
+            __text = f"Prochaine {mode} le {self.__time_to_string(time.gmtime(sleeptime + time.mktime(loc)))}\n"
+            print(__text)
+            self.log_txt += __text
+            self.__pause(sleeptime)
+            __text = f"****************************\n C'est l'heure ! {mode} le {self.__time_to_string(time.localtime())}\n"
+            print(__text)
+            self.log_txt += __text
+            self.__toggle_chicken_nurse(mode)
+            self.__pause(int(2 * self.offset_sec))
+            self.__write_log()
+
+    def __get_next_step_and_time(self, loc_time=None):
 
         if loc_time is None:
             cur_time_tuple = time.localtime()
@@ -127,53 +152,69 @@ class ChickenNurse:
         sunset_time = time.mktime(self.sun_wait.get_sunset_time(cur_time_tuple) + (0, 0, 0))
 
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
-            sleeptime = sunrise_time - self.offset_sec - cur_time
-            print(f"{sleeptime}s avant le lever du soleil")
-            mode = self.MODES[1]
+            raw_sleep_time = sunrise_time - cur_time
+            sleeptime = raw_sleep_time - self.offset_sec
+            __text = f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure\n"
+            mode = self.modes[1]
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
-            sleeptime = sunset_time + self.offset_sec - cur_time
-            print(f"{sleeptime}s avant le coucher du soleil")
-            mode = self.MODES[0]
+            raw_sleep_time = sunset_time - cur_time
+            sleeptime = raw_sleep_time + self.offset_sec
+            __text = f"Le soleil va se coucher dans {raw_sleep_time}s\n"
+            mode = self.modes[0]
         else:  # Après le coucher du soleil
             tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
             sunrise_time = time.mktime(self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0)) + (0, 0, 0))
-            sleeptime = sunrise_time - self.offset_sec - cur_time
-            print(f"{sleeptime}s après le coucher du soleil")
-            mode = self.MODES[1]
+            raw_sleep_time = sunrise_time - cur_time
+            sleeptime = raw_sleep_time - self.offset_sec
+            __text = f"il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin\n"
+            mode = self.modes[1]
+        print(__text)
+        self.log_txt += __text
         if sleeptime < 0:
+            self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
         return sleeptime, mode
 
-    def get_next_step_and_time_debug(self):
+    def __get_next_step_and_time_debug(self):
+        self.log_txt += "debug next step\n"
         self.debug_flag = ~self.debug_flag
-        return 3, self.MODES[self.debug_flag]
+        return 3, self.modes[self.debug_flag]
 
-    def toggle_chicken_nurse(self, mode):
+    def __write_log(self):
+        with open(LOGFILE, "w") as file:
+            file.write(self.log_txt)
+
+    def __toggle_chicken_nurse(self, mode):
         self.led.on()
-        if mode == self.MODES[0]:
+        if mode == self.modes[0]:
+            self.log_txt += f"door is {read_status()} : now closing...\n"
             close_door()
-        elif mode == self.MODES[1]:
+            self.log_txt += f"door {read_status()}.\n"
+        elif mode == self.modes[1]:
+            self.log_txt += f"door is {read_status()} : now opening...\n"
             open_door()
+            self.log_txt += f"door {read_status()}.\n"
         self.led.off()
 
-    def run(self):
-        while True:
-            loc = time.localtime()
-            # loc = (2023, 12, 31, 21, 34, 0, 5, 273)
-            print(f"il est {loc}, la porte est {read_status()}")
-            if self.debug:
-                sleeptime, mode = self.get_next_step_and_time_debug()
-            else:
-                sleeptime, mode = self.get_next_step_and_time(loc_time=loc)
-            print(f"Prochaine {mode} à {time.gmtime(sleeptime + time.mktime(loc))} dodo pendant {sleeptime}s")
-            if self.use_deep_sleep:
-                picosleep.seconds(sleeptime)
-            else:
-                time.sleep(sleeptime)
-            print(f"C'est l'heure ! {mode} à {time.localtime()}")
-            self.toggle_chicken_nurse(mode)
-            if self.use_deep_sleep:
-                picosleep.seconds(int(2 * self.offset_sec))
-            else:
-                time.sleep(int(2 * self.offset_sec))
+    def __time_to_string(self, n):
+        return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
+
+    def __pause(self, seconds):
+        n = time.localtime()
+        __text = f"Nous sommes le {self.__time_to_string(n)}, dodo pendant {seconds}s... zzzzzzz\n"
+        print(__text)
+        self.log_txt += __text
+        self.__write_log()
+        if self.use_deep_sleep:
+            time.sleep(1)
+            saved_hour = RTC().datetime()
+            picosleep.seconds(seconds)
+            self.clock.datetime(RTC().datetime())
+        else:
+            time.sleep(seconds)
+        n = time.localtime()
+        __text = f"... bonjour, nous sommes le {self.__time_to_string(n)}\n"
+        print(__text)
+        self.log_txt += __text
+        self.__write_log()
