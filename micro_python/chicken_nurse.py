@@ -3,128 +3,105 @@ from datetime import date
 # import picosleep
 from sun import Sun
 
-from machine import Pin, RTC, deepsleep, lightsleep
+from machine import Pin, RTC, lightsleep, Timer
 import time
+
+from commandes_moteur import STATUS_CLOSING, STATUS_OPENING, STATUS_CLOSED, STATUS_OPENED, open_door, close_door, stop, \
+    read_status
 
 LATITUDE = 45.343167
 LONGITUDE = 5.586088
 TIME_ZONE = 2
 OFFSET_SEC = 1800  # seconds
+OFFSET_SEC__DEBUG = 5  # seconds
+SLEEP_TIME__DEBUG = 3  # seconds
 
-TIME_UP = 30  # seconds
-TIME_DOWN = 30  # seconds
-FILENAME = "status.txt"
 LOGFILE = "chicken.log"
-# ///////////////// Define Motor Driver GPIO Pins /////////////////
-# Motor A, Left Side GPIO CONSTANTS
-PWM_FORWARD_LEFT_PIN = 15  # IN1 - Forward Drive
-PWM_REVERSE_LEFT_PIN = 14  # IN2 - Reverse Drive
 
-STATUS_CLOSED = "Closed"
-STATUS_OPENED = "Opened"
-STATUS_CLOSING = "Closing"
-STATUS_OPENING = "Opening"
-
-p0 = Pin(PWM_FORWARD_LEFT_PIN, Pin.OUT)
-p1 = Pin(PWM_REVERSE_LEFT_PIN, Pin.OUT)
-
-
-def open_door():
-    if read_status() == STATUS_CLOSED or read_status() == STATUS_OPENING:
-        print("Opening because door is " + read_status())
-        opening()
-        write_status(STATUS_OPENED)
-    print("Status = " + STATUS_OPENED)
-
-
-def close_door():
-    if read_status() == STATUS_OPENED or read_status() == STATUS_CLOSING:
-        print("Closing because door is " + read_status())
-        closing()
-        write_status(STATUS_CLOSED)
-    print("Status = " + STATUS_CLOSED)
-
-
-def force_open_door():
-    write_status(STATUS_OPENING)
-    opening()
-    write_status(STATUS_OPENED)
-
-
-def force_close_door():
-    write_status(STATUS_CLOSING)
-    closing()
-    write_status(STATUS_CLOSED)
-
-
-def opening():
-    write_status(STATUS_OPENING)
-    p0.high()
-    p1.low()
-    time.sleep(TIME_UP)
-    stop()
-
-
-def closing():
-    write_status(STATUS_CLOSING)
-    p0.low()
-    p1.high()
-    time.sleep(TIME_DOWN)
-    stop()
-
-
-def stop():
-    p0.low()
-    p1.low()
-
-
-def exit_door():
-    stop()
-    p0.close()
-    p1.close()
-
-
-def write_status(status):
-    with open(FILENAME, "w") as file:
-        file.write(status)
-
-
-def read_status():
-    try:
-        with open(FILENAME, "r") as file:
-            status = file.readline()
-    except OSError:
-        status = 'NO FILE'
-    return status
+MODE_OUVERTURE = "Ouverture"
+MODE_FERMETURE = "Fermetrue"
 
 
 class ChickenNurse:
     def __init__(self, debug=False, use_deep_sleep=False, verbose=False):
-        self.lat = LATITUDE
-        self.lon = LONGITUDE
-        self.time_zone = TIME_ZONE
-        self.sun_wait = Sun(lat=self.lat, lon=self.lon, tzone=self.time_zone)
-        self.modes = ['Fermeture', 'Ouverture']
-        self.debug_flag = True
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
         self.verbose = verbose
+        self.lat, self.lon, self.time_zone = LATITUDE, LONGITUDE, TIME_ZONE
+        self.sun_wait = Sun(lat=self.lat, lon=self.lon, tzone=self.time_zone)
+        self.__debug_bool_toggle = True
         if self.debug:
             self.print_("DEBUG")
-            self.offset_sec = 5  # 1800
+            self.offset_sec = OFFSET_SEC__DEBUG  # 1800
         else:
             self.offset_sec = OFFSET_SEC
-        self.led = Pin("LED", Pin.OUT)
-        self.led.off()
+        self.__init_pin()
         self.log_txt = ""
         self.clock = RTC()
         self._clean_status()
 
+    def run(self):
+        if self.debug:
+            for _ in range(100):
+                self.__run_loop()
+        else:
+            while True:
+                self.__run_loop()
+
+    def __run_loop(self):
+        # Current time :
+        _time = time.localtime()
+
+        # Log Text :
+        if not self.debug:
+            self.log_txt = ""
+
+        self.__print_log(f"0- Nous sommes le {self.__time_to_string(_time)}, la porte est {read_status()}\n")
+
+        # Compute sleep duration time:
+        if self.debug:
+            _sleep_time, mode = self.__get_next_step_and_time__debug()
+        else:
+            _sleep_time, mode = self.__get_next_step_and_time(loc_time=_time)
+
+        self.__print_log(
+            f"2- Prochaine {mode} le {self.__time_to_string(time.gmtime(_sleep_time + time.mktime(_time)))}\n")
+
+        # Sleep......
+        self.__print_log(f"3- Sleep {_sleep_time:1.2f}s")
+        self.__sleep(_sleep_time)
+
+        self.__print_log(
+            f"****************************\n C'est l'heure ! {mode} le {self.__time_to_string(time.localtime())}\n")
+
+        # ACTION ouverture ou fermeture :
+        self.__toggle_chicken_nurse(mode)
+
+        # Attente résiduelle avant
+        self.__print_log(f"4- Sleep {2 * self.offset_sec:1.2f}s")
+        self.__sleep(int(2 * self.offset_sec))
+
+        self.__write_log_file()
+
+    def __print_log(self, text):
+        self.print_(text)
+        self.log_txt += text
+
+    def __init_pin(self):
+        self.led = Pin("LED", Pin.OUT)
+        self.led.off()
+
     def _clean_status(self):
+        self.__print_log('CLEANING')
         if read_status() == STATUS_CLOSING:
-            close_door()
+            self.__close_door()
         elif read_status() == STATUS_OPENING:
-            open_door()
+            self.__open_door()
+        else:
+            stop()
+        stop()
+
+    def quit(self):
         stop()
 
     def print_(self, msg):
@@ -132,29 +109,6 @@ class ChickenNurse:
             pass
         else:
             print(msg)
-
-    def run(self):
-        while True:
-            if not self.debug:
-                self.log_txt = ""
-            loc = time.localtime()
-            __text = f"Nous sommes le {self.__time_to_string(loc)}, la porte est {read_status()}\n"
-            self.print_(__text)
-            self.log_txt += __text
-            if self.debug:
-                sleeptime, mode = self.__get_next_step_and_time_debug()
-            else:
-                sleeptime, mode = self.__get_next_step_and_time(loc_time=loc)
-            __text = f"Prochaine {mode} le {self.__time_to_string(time.gmtime(sleeptime + time.mktime(loc)))}\n"
-            self.print_(__text)
-            self.log_txt += __text
-            self.__pause(sleeptime)
-            __text = f"****************************\n C'est l'heure ! {mode} le {self.__time_to_string(time.localtime())}\n"
-            self.print_(__text)
-            self.log_txt += __text
-            self.__toggle_chicken_nurse(mode)
-            self.__pause(int(2 * self.offset_sec))
-            self.__write_log()
 
     def __get_next_step_and_time(self, loc_time=None):
 
@@ -169,21 +123,21 @@ class ChickenNurse:
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
             sleeptime = raw_sleep_time - self.offset_sec
-            __text = f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure\n"
-            mode = self.modes[1]
+            __text = f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure\n"
+            mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
             raw_sleep_time = sunset_time - cur_time
             sleeptime = raw_sleep_time + self.offset_sec
-            __text = f"Le soleil va se coucher dans {raw_sleep_time}s\n"
-            mode = self.modes[0]
+            __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s\n"
+            mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
             tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
             sunrise_time = time.mktime(self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0)) + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
             sleeptime = raw_sleep_time - self.offset_sec
-            __text = f"il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin\n"
-            mode = self.modes[1]
+            __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin\n"
+            mode = MODE_OUVERTURE
         self.print_(__text)
         self.log_txt += __text
         if sleeptime < 0:
@@ -191,45 +145,65 @@ class ChickenNurse:
             raise ValueError("Sleep time is < 0 !")
         return sleeptime, mode
 
-    def __get_next_step_and_time_debug(self):
-        self.log_txt += "debug next step\n"
-        self.debug_flag = ~self.debug_flag
-        return 3, self.modes[self.debug_flag]
+    def __get_next_step_and_time__debug(self):
+        self.__print_log("1- debug next step\n")
+        self.__debug_bool_toggle = ~self.__debug_bool_toggle
+        __status = read_status()
+        if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
+            return SLEEP_TIME__DEBUG, MODE_OUVERTURE
+        elif __status == STATUS_OPENED or __status == STATUS_OPENING:
+            return SLEEP_TIME__DEBUG, MODE_FERMETURE
 
-    def __write_log(self):
+    def __write_log_file(self):
         with open(LOGFILE, "w") as file:
             file.write(self.log_txt)
 
+    def __blink(self, time):
+        self.led.toggle()
+
     def __toggle_chicken_nurse(self, mode):
+        if mode == MODE_FERMETURE:
+            self.__print_log(f"door is {read_status()} : now closing...\n")
+            self.__close_door()
+            self.__print_log(f"door {read_status()}.\n")
+        elif mode == MODE_OUVERTURE:
+            self.__print_log(f"door is {read_status()} : now opening...\n")
+            self.__open_door()
+            self.__print_log(f"door {read_status()}.\n")
+        else:
+            raise ValueError(f"{mode} is unknown")
+
+    def __close_door(self):
+        timer = Timer()
+        timer.init(freq=5, mode=Timer.PERIODIC, callback=self.__blink)
+        close_door()
+        timer.deinit()
         self.led.on()
-        if mode == self.modes[0]:
-            self.log_txt += f"door is {read_status()} : now closing...\n"
-            close_door()
-            self.log_txt += f"door {read_status()}.\n"
-        elif mode == self.modes[1]:
-            self.log_txt += f"door is {read_status()} : now opening...\n"
-            open_door()
-            self.log_txt += f"door {read_status()}.\n"
-        self.led.off()
+
+    def __open_door(self):
+        timer = Timer()
+        timer.init(freq=5, mode=Timer.PERIODIC, callback=self.__blink)
+        open_door()
+        timer.deinit()
+        self.led.on()
 
     def __time_to_string(self, n):
         return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
 
-    def __pause(self, seconds):
+    def __sleep(self, seconds):
         n = time.localtime()
-        __text = f"Nous sommes le {self.__time_to_string(n)}, dodo pendant {seconds}s... zzzzzzz\n"
-        self.print_(__text)
-        self.log_txt += __text
-        self.__write_log()
+        self.__print_log(f"Nous sommes le {self.__time_to_string(n)}, dodo pendant {seconds}s... zzzzzzz\n")
+        self.__write_log_file()
         if self.use_deep_sleep:
             time.sleep(1)
             saved_hour = RTC().datetime()
-            lightsleep([seconds*1000])
+            self.led.off()
+            lightsleep(seconds * 1000)
             self.clock.datetime(RTC().datetime())
         else:
+            self.led.off()
             time.sleep(seconds)
+        self.led.on()
         n = time.localtime()
-        __text = f"... bonjour, nous sommes le {self.__time_to_string(n)}\n"
-        self.print_(__text)
-        self.log_txt += __text
-        self.__write_log()
+        self.__print_log(f"... bonjour, nous sommes le {self.__time_to_string(n)}\n")
+        self.__write_log_file()
