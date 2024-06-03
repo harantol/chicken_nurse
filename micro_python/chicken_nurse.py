@@ -1,9 +1,9 @@
 import datetime
 from datetime import date
-import picosleep
+# import picosleep
 from sun import Sun
 
-from machine import Pin, RTC
+from machine import Pin, RTC, deepsleep, lightsleep
 import time
 
 LATITUDE = 45.343167
@@ -31,7 +31,7 @@ p1 = Pin(PWM_REVERSE_LEFT_PIN, Pin.OUT)
 
 def open_door():
     if read_status() == STATUS_CLOSED or read_status() == STATUS_OPENING:
-        print("Status = " + STATUS_CLOSED)
+        print("Opening because door is " + read_status())
         opening()
         write_status(STATUS_OPENED)
     print("Status = " + STATUS_OPENED)
@@ -39,7 +39,7 @@ def open_door():
 
 def close_door():
     if read_status() == STATUS_OPENED or read_status() == STATUS_CLOSING:
-        print("Status = " + STATUS_OPENED)
+        print("Closing because door is " + read_status())
         closing()
         write_status(STATUS_CLOSED)
     print("Status = " + STATUS_CLOSED)
@@ -99,7 +99,7 @@ def read_status():
 
 
 class ChickenNurse:
-    def __init__(self, debug=False, use_deep_sleep=True):
+    def __init__(self, debug=False, use_deep_sleep=False, verbose=False):
         self.lat = LATITUDE
         self.lon = LONGITUDE
         self.time_zone = TIME_ZONE
@@ -108,8 +108,9 @@ class ChickenNurse:
         self.debug_flag = True
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
+        self.verbose = verbose
         if self.debug:
-            print("DEBUG")
+            self.print_("DEBUG")
             self.offset_sec = 5  # 1800
         else:
             self.offset_sec = OFFSET_SEC
@@ -117,6 +118,20 @@ class ChickenNurse:
         self.led.off()
         self.log_txt = ""
         self.clock = RTC()
+        self._clean_status()
+
+    def _clean_status(self):
+        if read_status() == STATUS_CLOSING:
+            close_door()
+        elif read_status() == STATUS_OPENING:
+            open_door()
+        stop()
+
+    def print_(self, msg):
+        if not self.verbose:
+            pass
+        else:
+            print(msg)
 
     def run(self):
         while True:
@@ -124,18 +139,18 @@ class ChickenNurse:
                 self.log_txt = ""
             loc = time.localtime()
             __text = f"Nous sommes le {self.__time_to_string(loc)}, la porte est {read_status()}\n"
-            print(__text)
+            self.print_(__text)
             self.log_txt += __text
             if self.debug:
                 sleeptime, mode = self.__get_next_step_and_time_debug()
             else:
                 sleeptime, mode = self.__get_next_step_and_time(loc_time=loc)
             __text = f"Prochaine {mode} le {self.__time_to_string(time.gmtime(sleeptime + time.mktime(loc)))}\n"
-            print(__text)
+            self.print_(__text)
             self.log_txt += __text
             self.__pause(sleeptime)
             __text = f"****************************\n C'est l'heure ! {mode} le {self.__time_to_string(time.localtime())}\n"
-            print(__text)
+            self.print_(__text)
             self.log_txt += __text
             self.__toggle_chicken_nurse(mode)
             self.__pause(int(2 * self.offset_sec))
@@ -169,7 +184,7 @@ class ChickenNurse:
             sleeptime = raw_sleep_time - self.offset_sec
             __text = f"il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin\n"
             mode = self.modes[1]
-        print(__text)
+        self.print_(__text)
         self.log_txt += __text
         if sleeptime < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
@@ -203,18 +218,18 @@ class ChickenNurse:
     def __pause(self, seconds):
         n = time.localtime()
         __text = f"Nous sommes le {self.__time_to_string(n)}, dodo pendant {seconds}s... zzzzzzz\n"
-        print(__text)
+        self.print_(__text)
         self.log_txt += __text
         self.__write_log()
         if self.use_deep_sleep:
             time.sleep(1)
             saved_hour = RTC().datetime()
-            picosleep.seconds(seconds)
+            lightsleep([seconds*1000])
             self.clock.datetime(RTC().datetime())
         else:
             time.sleep(seconds)
         n = time.localtime()
         __text = f"... bonjour, nous sommes le {self.__time_to_string(n)}\n"
-        print(__text)
+        self.print_(__text)
         self.log_txt += __text
         self.__write_log()
