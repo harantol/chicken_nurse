@@ -1,5 +1,6 @@
 import datetime
 from datetime import date
+
 # import picosleep
 from sun import Sun
 
@@ -15,6 +16,7 @@ TIME_ZONE = 2
 OFFSET_SEC = 1800  # seconds
 OFFSET_SEC__DEBUG = 5  # seconds
 SLEEP_TIME__DEBUG = 3  # seconds
+MAX_SLEEP_DURATION = 71*60*1000  # milliseconds
 
 LOGFILE = "chicken.log"
 
@@ -23,13 +25,12 @@ MODE_FERMETURE = "Fermetrue"
 
 
 class ChickenNurse:
-    def __init__(self, debug=False, use_deep_sleep=False, verbose=False):
+    def __init__(self, debug=False, use_deep_sleep=True, verbose=False):
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
         self.verbose = verbose
         self.lat, self.lon, self.time_zone = LATITUDE, LONGITUDE, TIME_ZONE
         self.sun_wait = Sun(lat=self.lat, lon=self.lon, tzone=self.time_zone)
-        self.__debug_bool_toggle = True
         if self.debug:
             self.print_("DEBUG")
             self.offset_sec = OFFSET_SEC__DEBUG  # 1800
@@ -64,6 +65,8 @@ class ChickenNurse:
         else:
             _sleep_time, mode = self.__get_next_step_and_time(loc_time=_time)
 
+        self.__check_status_and_action(mode)
+
         self.__print_log(
             f"2- Prochaine {mode} le {self.__time_to_string(time.gmtime(_sleep_time + time.mktime(_time)))}\n")
 
@@ -92,7 +95,7 @@ class ChickenNurse:
         self.led.off()
 
     def _clean_status(self):
-        self.__print_log('CLEANING')
+        self.__print_log('CLEANING PENDING STATES')
         if read_status() == STATUS_CLOSING:
             self.__close_door()
         elif read_status() == STATUS_OPENING:
@@ -110,6 +113,13 @@ class ChickenNurse:
         else:
             print(msg)
 
+    def __check_status_and_action(self, mode):
+        __status = read_status()
+        if mode == MODE_OUVERTURE and __status != STATUS_CLOSED:
+            self.__close_door()  # La porte ne devrait pas être ouverte !
+        elif mode == MODE_FERMETURE and __status != STATUS_OPENED:
+            self.__open_door()  # La porte ne devrait pas être fermée !
+
     def __get_next_step_and_time(self, loc_time=None):
 
         if loc_time is None:
@@ -119,6 +129,10 @@ class ChickenNurse:
         cur_time = time.mktime(cur_time_tuple)
         sunrise_time = time.mktime(self.sun_wait.get_sunrise_time(cur_time_tuple) + (0, 0, 0))
         sunset_time = time.mktime(self.sun_wait.get_sunset_time(cur_time_tuple) + (0, 0, 0))
+        if sunset_time - sunrise_time < 0:
+            raise ValueError('Error in computing sunrise and sunset !!')
+
+        __status = read_status()
 
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
@@ -138,8 +152,7 @@ class ChickenNurse:
             sleeptime = raw_sleep_time - self.offset_sec
             __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin\n"
             mode = MODE_OUVERTURE
-        self.print_(__text)
-        self.log_txt += __text
+        self.__print_log(__text)
         if sleeptime < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
@@ -147,7 +160,6 @@ class ChickenNurse:
 
     def __get_next_step_and_time__debug(self):
         self.__print_log("1- debug next step\n")
-        self.__debug_bool_toggle = ~self.__debug_bool_toggle
         __status = read_status()
         if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
             return SLEEP_TIME__DEBUG, MODE_OUVERTURE
@@ -196,9 +208,12 @@ class ChickenNurse:
         self.__write_log_file()
         if self.use_deep_sleep:
             time.sleep(1)
-            saved_hour = RTC().datetime()
             self.led.off()
-            lightsleep(seconds * 1000)
+            delay = 0
+            while (delay + MAX_SLEEP_DURATION) < (seconds * 1000):
+                lightsleep(MAX_SLEEP_DURATION)
+                delay += MAX_SLEEP_DURATION
+            lightsleep(seconds * 1000 - delay)
             self.clock.datetime(RTC().datetime())
         else:
             self.led.off()

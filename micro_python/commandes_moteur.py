@@ -19,19 +19,19 @@ p1 = Pin(PWM_REVERSE_LEFT_PIN, Pin.OUT)
 
 
 def open_door():
-    if read_status() == STATUS_CLOSED or read_status() == STATUS_OPENING:
+    if read_status() != STATUS_OPENED:
         print("Opening because door is " + read_status())
         opening()
         write_status(STATUS_OPENED)
-    print("Status = " + STATUS_OPENED)
+    print("Status = " + read_status())
 
 
 def close_door():
-    if read_status() == STATUS_OPENED or read_status() == STATUS_CLOSING:
+    if read_status() != STATUS_CLOSED:
         print("Closing because door is " + read_status())
         closing()
         write_status(STATUS_CLOSED)
-    print("Status = " + STATUS_CLOSED)
+    print("Status = " + read_status())
 
 
 def force_open_door():
