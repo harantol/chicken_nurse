@@ -95,13 +95,7 @@ class ChickenNurse:
         self.led.off()
 
     def _clean_status(self):
-        self.__print_log('CLEANING PENDING STATES')
-        if read_status() == STATUS_CLOSING:
-            self.__close_door()
-        elif read_status() == STATUS_OPENING:
-            self.__open_door()
-        else:
-            stop()
+        self.__print_log('STOP')
         stop()
 
     def quit(self):
@@ -204,7 +198,7 @@ class ChickenNurse:
 
     def __sleep(self, seconds):
         n = time.localtime()
-        self.__print_log(f"Nous sommes le {self.__time_to_string(n)}, dodo pendant {seconds}s... zzzzzzz\n")
+        self.__print_log(f"Nous sommes le {self.__time_to_string(n)}, la porte est {read_status()} dodo pendant {seconds}s... zzzzzzz\n")
         self.__write_log_file()
         if self.use_deep_sleep:
             time.sleep(1)
@@ -220,5 +214,5 @@ class ChickenNurse:
             time.sleep(seconds)
         self.led.on()
         n = time.localtime()
-        self.__print_log(f"... bonjour, nous sommes le {self.__time_to_string(n)}\n")
+        self.__print_log(f"... bonjour, nous sommes le {self.__time_to_string(n)} la porte est {read_status()}\n")
         self.__write_log_file()
