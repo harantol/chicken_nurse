@@ -22,28 +22,26 @@ def open_door():
     if read_status() != STATUS_OPENED:
         print("Opening because door is " + read_status())
         opening()
-        write_status(STATUS_OPENED)
-    print("Status = " + read_status())
+        print("Status = " + read_status())
+    else:
+        print("Door is already " + STATUS_OPENED)
 
 
 def close_door():
     if read_status() != STATUS_CLOSED:
         print("Closing because door is " + read_status())
         closing()
-        write_status(STATUS_CLOSED)
-    print("Status = " + read_status())
+        print("Status = " + read_status())
+    else:
+        print("Door is already " + STATUS_CLOSED)
 
 
 def force_open_door():
-    write_status(STATUS_OPENING)
     opening()
-    write_status(STATUS_OPENED)
 
 
 def force_close_door():
-    write_status(STATUS_CLOSING)
     closing()
-    write_status(STATUS_CLOSED)
 
 
 def opening():
@@ -52,6 +50,7 @@ def opening():
     p1.low()
     time.sleep(TIME_UP)
     stop()
+    write_status(STATUS_OPENED)
 
 
 def closing():
@@ -60,6 +59,7 @@ def closing():
     p1.high()
     time.sleep(TIME_DOWN)
     stop()
+    write_status(STATUS_CLOSED)
 
 
 def stop():
