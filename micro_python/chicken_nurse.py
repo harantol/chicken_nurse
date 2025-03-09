@@ -188,7 +188,7 @@ class ChickenNurse:
             return SLEEP_TIME__DEBUG, MODE_FERMETURE
 
     def __write_log_file(self):
-        with open(LOGFILE, "w") as file:
+        with open(LOGFILE, "a") as file:
             file.write(self.log_txt)
             self.log_txt = ""
 
