@@ -25,5 +25,5 @@ def connnect(verbose=True):
 
 
 def set_local_time():
-    ntptime.host = "1.europe.pool.ntp.org"
+    #ntptime.host = "1.europe.pool.ntp.org"
     ntptime.settime()
