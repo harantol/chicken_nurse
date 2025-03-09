@@ -9,7 +9,7 @@ import time
 
 from commandes_moteur import STATUS_CLOSING, STATUS_OPENING, STATUS_CLOSED, STATUS_OPENED, open_door, close_door, stop, \
     read_status
-from wlan_connection import connnect as wifi_connect
+import wlan_connection
 
 BLINK_CLOSING = 100
 BLINK_OPENING = 1000
@@ -56,7 +56,8 @@ class ChickenNurse:
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         self.__print_log(f"WIFI connexion......")
         try:
-            wifi_connect(verbose=False)
+            wlan_connection.connnect(verbose=False)
+            wlan_connection.set_local_time()
             self.__print_log(f"WIFI connexion OK.")
         except RuntimeError:
             self.__print_log("WIFI connexion failed !")
