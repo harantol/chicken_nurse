@@ -1,6 +1,5 @@
 import network
 import time
-from local_time import set_local_time
 
 def connnect(verbose=True):
     wlan = network.WLAN(network.STA_IF)
