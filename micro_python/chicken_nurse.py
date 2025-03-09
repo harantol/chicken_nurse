@@ -1,5 +1,7 @@
 import datetime
 from datetime import date
+
+import local_time
 # import picosleep
 from sun import Sun
 
@@ -9,6 +11,7 @@ import time
 from commandes_moteur import STATUS_CLOSING, STATUS_OPENING, STATUS_CLOSED, STATUS_OPENED, open_door, close_door, stop, \
     read_status
 import wlan_connection
+from local_time import set_local_time
 
 BLINK_CLOSING = 100
 BLINK_OPENING = 1000
@@ -43,10 +46,10 @@ class ChickenNurse:
         self.lat, self.lon, self.time_zone = LATITUDE, LONGITUDE, TIME_ZONE
         self.sun_wait = Sun(lat=self.lat, lon=self.lon, tzone=self.time_zone)
         if self.debug:
-            self.print_("DEBUG")
-            self.offset_sec = OFFSET_SEC__DEBUG  # 1800
+            self.__print_log("%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%")
+            self.offset_sec = OFFSET_SEC__DEBUG
         else:
-            self.offset_sec = OFFSET_SEC
+            self.offset_sec = OFFSET_SEC  # 1800
 
         self._clean_status()
         self.__write_log_file()
@@ -56,18 +59,21 @@ class ChickenNurse:
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         self.__print_log(f"WIFI connexion......")
         try:
-            wlan_connection.connnect(verbose=False)
-            wlan_connection.set_local_time()
+            wlan_connection.connnect(verbose=True)
             self.__print_log(f"WIFI connexion OK.")
-            time.sleep(2)
+            self.__print_log(f"Set local time ...")
             self.clock = RTC()
+            set_local_time(rtc=self.clock)
+            #local_time.set_local_time(rtc=self.clock)
+            self.__print_log(f"Set local time OK.")
+            time.sleep(2)
             timer.deinit()
-        except RuntimeError:
+        except RuntimeError or OSError as e:
             timer.deinit()
             self.__print_log("WIFI connexion failed, stay opened !")
             self.__open_door(period=2000)
             self.__write_log_file()
-            raise RuntimeError('wifi connexion failed')
+            raise e('wifi connexion or datetime setting failed')
 
     def run(self):
         if self.debug:
@@ -80,18 +86,13 @@ class ChickenNurse:
     def __run_loop(self):
         # Current time :
         _time = time.localtime()
-
-        # Log Text :
-        if not self.debug:
-            self.log_txt = ""
-
+        self.__print_log(f"********* RUN LOOP *************")
         self.__print_log(f"0- la porte est {read_status()}")
 
         # Compute sleep duration time:
+        _sleep_time, mode = self.__get_next_step_and_time(loc_time=_time)
         if self.debug:
             _sleep_time, mode = self.__get_next_step_and_time__debug()
-        else:
-            _sleep_time, mode = self.__get_next_step_and_time(loc_time=_time)
 
         self.__check_status_and_action(mode)
 
@@ -99,7 +100,7 @@ class ChickenNurse:
             f"2- Prochaine {mode} le {self.__time_to_string(time.gmtime(_sleep_time + time.mktime(_time)))}")
 
         # Sleep......
-        self.__print_log(f"3- Sleep {_sleep_time:1.2f}s")
+        self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
         self.__sleep(_sleep_time)
         self.__print_log(f"****************************\n C'est l'heure ! {mode}")
 
@@ -107,13 +108,13 @@ class ChickenNurse:
         self.__toggle_chicken_nurse(mode)
 
         # Attente résiduelle avant
-        self.__print_log(f"4- Sleep {2 * self.offset_sec:1.2f}s")
+        self.__print_log(f"4- Additional sleep {2 * self.offset_sec:1.2f}s")
         self.__sleep(int(2 * self.offset_sec))
-
+        self.__print_log(f"********* END RUN LOOP *************]")
         self.__write_log_file()
 
     def __print_log(self, text):
-        text = self.__time_to_string(time.localtime()) + " : " + text
+        text = self.__time_to_string(time.localtime()) + " || " + text
         self.print_(text)
         self.log_txt += text + '\n'
 
@@ -176,7 +177,7 @@ class ChickenNurse:
         return sleeptime, mode
 
     def __get_next_step_and_time__debug(self):
-        self.__print_log("1- debug next step")
+        self.__print_log("1- debug : NO SUN, manual next step")
         __status = read_status()
         if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
             return SLEEP_TIME__DEBUG, MODE_OUVERTURE
