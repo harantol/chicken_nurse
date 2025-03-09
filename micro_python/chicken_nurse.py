@@ -1,6 +1,5 @@
 import datetime
 from datetime import date
-
 # import picosleep
 from sun import Sun
 
@@ -62,12 +61,11 @@ class ChickenNurse:
             self.__print_log(f"WIFI connexion OK.")
             time.sleep(2)
             self.clock = RTC()
-        except RuntimeError:
-            timer.init(period=2000, mode=Timer.PERIODIC, callback=self.__blink)
-            self.__print_log("WIFI connexion failed, stay opened !")
-            self.__open_door()
             timer.deinit()
-            self.led.off()
+        except RuntimeError:
+            timer.deinit()
+            self.__print_log("WIFI connexion failed, stay opened !")
+            self.__open_door(period=2000)
             self.__write_log_file()
             raise RuntimeError('wifi connexion failed')
 
@@ -103,9 +101,7 @@ class ChickenNurse:
         # Sleep......
         self.__print_log(f"3- Sleep {_sleep_time:1.2f}s")
         self.__sleep(_sleep_time)
-
-        self.__print_log(
-            f"****************************\n C'est l'heure ! {mode}")
+        self.__print_log(f"****************************\n C'est l'heure ! {mode}")
 
         # ACTION ouverture ou fermeture :
         self.__toggle_chicken_nurse(mode)
@@ -208,26 +204,17 @@ class ChickenNurse:
             raise ValueError(f"{mode} is unknown")
 
     def __close_door(self):
-        timer = Timer()
-        timer.init(period=BLINK_CLOSING, mode=Timer.PERIODIC, callback=self.__blink)
-        close_door()
-        timer.deinit()
-        self.led.on()
+        self.__exec_with_blinking(period=BLINK_CLOSING, callable=close_door)
 
-    def __open_door(self):
-        timer = Timer()
-        timer.init(period=BLINK_OPENING, mode=Timer.PERIODIC, callback=self.__blink)
-        open_door()
-        timer.deinit()
-        self.led.on()
+    def __open_door(self, period: int = BLINK_OPENING):
+        self.__exec_with_blinking(period=period, callable=open_door)
 
     def __time_to_string(self, n):
         return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
 
     def __sleep(self, seconds):
-        n = time.localtime()
         self.__print_log(
-            f"la porte est {read_status()} dodo pendant {seconds}s...\n zzzzzzz")
+            f"la porte est {read_status()} dodo pendant {seconds}s...\n zzzzzzz\n zzzzzzz\n zzzzzzz")
         self.__write_log_file()
         if self.use_deep_sleep:
             time.sleep(1)
@@ -242,9 +229,15 @@ class ChickenNurse:
             self.led.off()
             time.sleep(seconds)
         self.led.on()
-        n = time.localtime()
         self.__print_log(f"... bonjour, la porte est {read_status()}")
         self.__write_log_file()
+
+    def __exec_with_blinking(self, period: int, callable):
+        timer = Timer()
+        timer.init(period=period, mode=Timer.PERIODIC, callback=self.__blink)
+        callable()
+        timer.deinit()
+        self.led.off()
 
 
 if __name__ == "__main__":
