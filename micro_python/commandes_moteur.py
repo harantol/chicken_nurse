@@ -3,7 +3,7 @@ from machine import Pin
 
 TIME_UP = 30  # seconds
 TIME_DOWN = 30  # seconds
-FILENAME = "status.txt"
+FILENAME = "door_state.txt"
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
 # Motor A, Left Side GPIO CONSTANTS
 PWM_FORWARD_LEFT_PIN = 15  # IN1 - Forward Drive

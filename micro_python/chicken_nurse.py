@@ -50,6 +50,7 @@ class ChickenNurse:
             self.offset_sec = OFFSET_SEC
 
         self._clean_status()
+        self.__write_log_file()
 
     def __init_clock(self):
         timer = Timer()
@@ -59,14 +60,16 @@ class ChickenNurse:
             wlan_connection.connnect(verbose=False)
             wlan_connection.set_local_time()
             self.__print_log(f"WIFI connexion OK.")
+            time.sleep(2)
+            self.clock = RTC()
         except RuntimeError:
             timer.init(period=2000, mode=Timer.PERIODIC, callback=self.__blink)
             self.__print_log("WIFI connexion failed, stay opened !")
             self.__open_door()
             timer.deinit()
+            self.led.off()
+            self.__write_log_file()
             raise RuntimeError('wifi connexion failed')
-        time.sleep(2)
-        self.clock = RTC()
 
     def run(self):
         if self.debug:
@@ -187,6 +190,7 @@ class ChickenNurse:
     def __write_log_file(self):
         with open(LOGFILE, "w") as file:
             file.write(self.log_txt)
+            self.log_txt = ""
 
     def __blink(self, time):
         self.led.toggle()
