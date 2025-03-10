@@ -33,13 +33,15 @@ MODE_FERMETURE = "Fermetrue"
 class ChickenNurse:
     def __init__(self, debug=False, use_deep_sleep=True, verbose=False):
         self.led = Pin("LED", Pin.OUT)
-        self.led.off()
+        self.led.on()
 
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
         self.verbose = verbose
         self.log_txt = ""
         self.clock = None
+
+        self._clean_status()
 
         self.__init_clock()
 
@@ -51,7 +53,6 @@ class ChickenNurse:
         else:
             self.offset_sec = OFFSET_SEC  # 1800
 
-        self._clean_status()
         self.__write_log_file()
 
     def __init_clock(self):
