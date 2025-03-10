@@ -1,11 +1,20 @@
 import network
 import time
 
-def connnect(verbose=True):
+
+def disconnect(wlan: network.WLAN):
+    wlan.disconnect()
+    wlan.active(False)
+    wlan.deinit()
+    wlan = None
+    time.sleep_ms(100)
+
+
+def connnect(verbose=True) -> network.WLAN:
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect("Androliv", "PTit3F33")
-    wait = 10
+    wlan.connect("Sosh", "PTit3F33")
+    wait = 100
     while wait > 0:
         if wlan.status() < 0 or wlan.status() >= 3:
             break
@@ -19,3 +28,4 @@ def connnect(verbose=True):
         if verbose:
             print('connected')
             print('IP: ', wlan.ifconfig()[0])
+    return wlan

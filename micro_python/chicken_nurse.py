@@ -60,7 +60,7 @@ class ChickenNurse:
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         self.__print_log(f"WIFI connexion......")
         try:
-            wlan_connection.connnect(verbose=True)
+            wlan = wlan_connection.connnect(verbose=True)
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
             self.clock = RTC()
@@ -69,6 +69,7 @@ class ChickenNurse:
             self.__print_log(f"Set local time OK.")
             time.sleep(2)
             timer.deinit()
+            wlan_connection.disconnect(wlan)
         except RuntimeError or OSError as e:
             timer.deinit()
             self.__print_log("WIFI connexion failed, stay opened !")
