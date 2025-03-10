@@ -1,7 +1,6 @@
 import datetime
 from datetime import date
 
-import local_time
 # import picosleep
 from sun import Sun
 

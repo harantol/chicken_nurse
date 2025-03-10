@@ -23,7 +23,7 @@ def get_local_time():
         # parsed['raw_offset']: timezone hour offset
         # 946684800: unixtime of 2020/01/01 00:00:00 (system start time on MicroPython)
         # generate datetime tuple based on these information
-        return time.localtime(parsed['unixtime'] + parsed['raw_offset'] - 946684800)
+        return time.localtime(parsed['unixtime'] + parsed['raw_offset'])
         # rtc.datetime((year, month, day, weekday, hour, minute, second, microsecond))
     else:
         raise OSError(f'Impossible to access {url_worldtimeapi}')
@@ -31,12 +31,14 @@ def get_local_time():
 
 def set_local_time(rtc: RTC = RTC()) -> None:
     tries = 0
-    while tries < 11:
-        print(f"{tries}/10...")
+    max_tries = 100
+    while tries <= max_tries:
+        print(f"{tries}/{max_tries}...")
         try:
             dt = get_local_time()
             rtc.datetime((dt[0], dt[1], dt[2], dt[6], dt[3], dt[4], dt[5], 0))
             return
         except OSError:
             tries += 1
+            time.sleep(1)
     raise OSError(f'Impossible to access {url_worldtimeapi}')
