@@ -41,4 +41,4 @@ def set_local_time(rtc: RTC = RTC()) -> None:
         except OSError:
             tries += 1
             time.sleep(1)
-    raise OSError(f'Impossible to access {url_worldtimeapi}')
+    raise RuntimeError(f'Impossible to access {url_worldtimeapi}')

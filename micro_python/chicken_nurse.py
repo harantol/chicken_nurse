@@ -69,12 +69,12 @@ class ChickenNurse:
             time.sleep(2)
             timer.deinit()
             wlan_connection.disconnect(wlan)
-        except RuntimeError or OSError as e:
+        except RuntimeError as e:
             timer.deinit()
             self.__print_log("WIFI connexion failed, stay opened !")
             self.__open_door(period=2000)
             self.__write_log_file()
-            raise e('wifi connexion or datetime setting failed')
+            raise RuntimeError(e)
 
     def run(self):
         try:
