@@ -77,12 +77,15 @@ class ChickenNurse:
             raise e('wifi connexion or datetime setting failed')
 
     def run(self):
-        if self.debug:
-            for _ in range(100):
-                self.__run_loop()
-        else:
-            while True:
-                self.__run_loop()
+        try:
+            if self.debug:
+                for _ in range(100):
+                    self.__run_loop()
+            else:
+                while True:
+                    self.__run_loop()
+        except:
+            self.__open_door()
 
     def __run_loop(self):
         # Current time :
