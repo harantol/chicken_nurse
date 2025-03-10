@@ -52,7 +52,7 @@ class ChickenNurse:
         else:
             self.offset_sec = OFFSET_SEC  # 1800
 
-        self.__write_log_file()
+        self.__write_log_file('w')  # erase exisiting log
 
     def __init_clock(self):
         timer = Timer()
@@ -188,8 +188,8 @@ class ChickenNurse:
         elif __status == STATUS_OPENED or __status == STATUS_OPENING:
             return SLEEP_TIME__DEBUG, MODE_FERMETURE
 
-    def __write_log_file(self):
-        with open(LOGFILE, "a") as file:
+    def __write_log_file(self, mode: str = 'a'):
+        with open(LOGFILE, mode) as file:
             file.write(self.log_txt)
             self.log_txt = ""
 
