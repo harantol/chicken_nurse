@@ -12,9 +12,10 @@ from commandes_moteur import STATUS_CLOSING, STATUS_OPENING, STATUS_CLOSED, STAT
 import wlan_connection
 from local_time import set_local_time
 
-BLINK_CLOSING = 100
-BLINK_OPENING = 1000
-BLINK_INIT = 30
+# parameters :
+BLINK_CLOSING = 100  # ms
+BLINK_OPENING = 1000  # ms
+BLINK_INIT = 30  # ms
 LATITUDE = 45.343167
 LONGITUDE = 5.586088
 TIME_ZONE = 2
@@ -22,15 +23,13 @@ OFFSET_SEC = 1800  # seconds
 OFFSET_SEC__DEBUG = 5  # seconds
 SLEEP_TIME__DEBUG = 3  # seconds
 MAX_SLEEP_DURATION = 71 * 60 * 1000  # milliseconds
-
 LOGFILE = "chicken.log"
-
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
 
 
 class ChickenNurse:
-    def __init__(self, debug=False, use_deep_sleep=True, verbose=False):
+    def __init__(self, debug: bool = False, use_deep_sleep: bool = True, verbose: bool = False) -> None:
         self.led = Pin("LED", Pin.OUT)
         self.led.on()
 
@@ -44,13 +43,13 @@ class ChickenNurse:
 
         self.__init_clock()
 
-        self.lat, self.lon, self.time_zone = LATITUDE, LONGITUDE, TIME_ZONE
-        self.sun_wait = Sun(lat=self.lat, lon=self.lon, tzone=self.time_zone)
+        self.sun_wait = Sun(lat=LATITUDE, lon=LONGITUDE, tzone=TIME_ZONE)
+
         if self.debug:
             self.__print_log("%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%")
-            self.offset_sec = OFFSET_SEC__DEBUG
+            self.additional_sleep_time = OFFSET_SEC__DEBUG
         else:
-            self.offset_sec = OFFSET_SEC  # 1800
+            self.additional_sleep_time = OFFSET_SEC
 
         self.__write_log_file('w')  # erase exisiting log
 
@@ -64,7 +63,7 @@ class ChickenNurse:
             self.__print_log(f"Set local time ...")
             self.clock = RTC()
             set_local_time(rtc=self.clock)
-            #local_time.set_local_time(rtc=self.clock)
+            # local_time.set_local_time(rtc=self.clock)
             self.__print_log(f"Set local time OK.")
             time.sleep(2)
             timer.deinit()
@@ -94,7 +93,7 @@ class ChickenNurse:
         self.__print_log(f"0- la porte est {read_status()}")
 
         # Compute sleep duration time:
-        _sleep_time, mode = self.__get_next_step_and_time(loc_time=_time)
+        _sleep_time, mode = self.__get_next_step_and_sleep_time(loc_time=_time)
         if self.debug:
             _sleep_time, mode = self.__get_next_step_and_time__debug()
 
@@ -112,8 +111,8 @@ class ChickenNurse:
         self.__toggle_chicken_nurse(mode)
 
         # Attente résiduelle avant
-        self.__print_log(f"4- Additional sleep {2 * self.offset_sec:1.2f}s")
-        self.__sleep(int(2 * self.offset_sec))
+        self.__print_log(f"4- Additional sleep {2 * self.additional_sleep_time:1.2f}s")
+        self.__sleep(int(2 * self.additional_sleep_time))
         self.__print_log(f"********* END RUN LOOP *************]")
         self.__write_log_file()
 
@@ -142,7 +141,7 @@ class ChickenNurse:
         elif mode == MODE_FERMETURE and __status != STATUS_OPENED:
             self.__open_door()  # La porte ne devrait pas être fermée !
 
-    def __get_next_step_and_time(self, loc_time=None):
+    def __get_next_step_and_sleep_time(self, loc_time=None):
 
         if loc_time is None:
             cur_time_tuple = time.localtime()
@@ -158,27 +157,27 @@ class ChickenNurse:
 
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
-            sleeptime = raw_sleep_time - self.offset_sec
+            sleep_time = raw_sleep_time - self.additional_sleep_time
             __text = f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
             mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
             raw_sleep_time = sunset_time - cur_time
-            sleeptime = raw_sleep_time + self.offset_sec
+            sleep_time = raw_sleep_time + self.additional_sleep_time
             __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s"
             mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
             tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
             sunrise_time = time.mktime(self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0)) + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
-            sleeptime = raw_sleep_time - self.offset_sec
+            sleep_time = raw_sleep_time - self.additional_sleep_time
             __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin"
             mode = MODE_OUVERTURE
         self.__print_log(__text)
-        if sleeptime < 0:
+        if sleep_time < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
-        return sleeptime, mode
+        return sleep_time, mode
 
     def __get_next_step_and_time__debug(self):
         self.__print_log("1- debug : NO SUN, manual next step")
@@ -214,22 +213,26 @@ class ChickenNurse:
     def __open_door(self, period: int = BLINK_OPENING):
         self.__exec_with_blinking(period=period, callable=open_door)
 
-    def __time_to_string(self, n):
+    @staticmethod
+    def __time_to_string(n):
         return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
 
-    def __sleep(self, seconds):
+    def __deep_sleep(self, seconds: int) -> None:
+        time.sleep(1)
+        self.led.off()
+        delay = 0
+        while (delay + MAX_SLEEP_DURATION) < (seconds * 1000):
+            lightsleep(MAX_SLEEP_DURATION)
+            delay += MAX_SLEEP_DURATION
+        lightsleep(seconds * 1000 - delay)
+        self.clock.datetime(RTC().datetime())
+
+    def __sleep(self, seconds: int) -> None:
         self.__print_log(
             f"la porte est {read_status()} dodo pendant {seconds}s...\n zzzzzzz\n zzzzzzz\n zzzzzzz")
         self.__write_log_file()
-        if self.use_deep_sleep:
-            time.sleep(1)
-            self.led.off()
-            delay = 0
-            while (delay + MAX_SLEEP_DURATION) < (seconds * 1000):
-                lightsleep(MAX_SLEEP_DURATION)
-                delay += MAX_SLEEP_DURATION
-            lightsleep(seconds * 1000 - delay)
-            self.clock.datetime(RTC().datetime())
+        if self.use_deep_sleep:  # doesn't work...
+            self.__deep_sleep(seconds=seconds)
         else:
             self.led.off()
             time.sleep(seconds)
