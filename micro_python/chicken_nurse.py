@@ -38,6 +38,7 @@ class ChickenNurse:
         self.verbose = verbose
         self.log_txt = ""
         self.clock = None
+        self.log_file = LOGFILE
 
         self._clean_status()
 
@@ -51,6 +52,8 @@ class ChickenNurse:
         else:
             self.additional_sleep_time = OFFSET_SEC
 
+        n = time.localtime()
+        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[3]}_{n[4]}_{n[5]}_" + LOGFILE
         self.__write_log_file('w')  # erase exisiting log
 
     def __init_clock(self):
@@ -188,7 +191,7 @@ class ChickenNurse:
             return SLEEP_TIME__DEBUG, MODE_FERMETURE
 
     def __write_log_file(self, mode: str = 'a'):
-        with open(LOGFILE, mode) as file:
+        with open(self.log_file, mode) as file:
             file.write(self.log_txt)
             self.log_txt = ""
 
