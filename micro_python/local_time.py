@@ -13,7 +13,7 @@ def get_www(www: str = url_worldtimeapi):
     return requests.get(www, timeout=10)
 
 
-def get_local_time():
+def get_local_time()->(time.localtime, int):
     response = get_www(url_worldtimeapi)
     print(response.status_code)
     if response.status_code == 200:
@@ -23,22 +23,25 @@ def get_local_time():
         # parsed['raw_offset']: timezone hour offset
         # 946684800: unixtime of 2020/01/01 00:00:00 (system start time on MicroPython)
         # generate datetime tuple based on these information
-        return time.localtime(parsed['unixtime'] + parsed['raw_offset'])
+        return time.localtime(parsed['unixtime'] + parsed['raw_offset']), parsed['raw_offset']
         # rtc.datetime((year, month, day, weekday, hour, minute, second, microsecond))
     else:
         raise OSError(f'Impossible to access {url_worldtimeapi}')
 
 
-def set_local_time(rtc: RTC = RTC()) -> None:
+def set_local_time(rtc: RTC = RTC()) -> int:
     tries = 0
     max_tries = 100
     while tries <= max_tries:
         print(f"{tries}/{max_tries}...")
         try:
-            dt = get_local_time()
+            dt, delta_sec = get_local_time()
             rtc.datetime((dt[0], dt[1], dt[2], dt[6], dt[3], dt[4], dt[5], 0))
-            return
+            return delta_sec
         except OSError:
+            tries += 1
+            time.sleep(1)
+        except ValueError:
             tries += 1
             time.sleep(1)
     raise RuntimeError(f'Impossible to access {url_worldtimeapi}')

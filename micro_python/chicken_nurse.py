@@ -18,7 +18,7 @@ BLINK_OPENING = 1000  # ms
 BLINK_INIT = 30  # ms
 LATITUDE = 45.343167
 LONGITUDE = 5.586088
-TIME_ZONE = 2
+TIME_ZONE = 0
 OFFSET_SEC = 1800  # seconds
 OFFSET_SEC__DEBUG = 5  # seconds
 SLEEP_TIME__DEBUG = 3  # seconds
@@ -37,6 +37,7 @@ class ChickenNurse:
         self.debug = debug
         self.verbose = verbose
         self.log_txt = ""
+        self.time_zone = TIME_ZONE
         self.clock = None
         self.log_file = LOGFILE
 
@@ -44,7 +45,7 @@ class ChickenNurse:
 
         self.__init_clock()
 
-        self.sun_wait = Sun(lat=LATITUDE, lon=LONGITUDE, tzone=TIME_ZONE)
+        self.sun_wait = Sun(lat=LATITUDE, lon=LONGITUDE, tzone=self.time_zone)
 
         if self.debug:
             self.__print_log("%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%")
@@ -65,7 +66,7 @@ class ChickenNurse:
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
             self.clock = RTC()
-            set_local_time(rtc=self.clock)
+            self.time_zone = int(set_local_time(rtc=self.clock)/3600)
             # local_time.set_local_time(rtc=self.clock)
             self.__print_log(f"Set local time OK.")
             time.sleep(2)
@@ -151,30 +152,32 @@ class ChickenNurse:
         else:
             cur_time_tuple = loc_time
         cur_time = time.mktime(cur_time_tuple)
-        sunrise_time = time.mktime(self.sun_wait.get_sunrise_time(cur_time_tuple) + (0, 0, 0))
-        sunset_time = time.mktime(self.sun_wait.get_sunset_time(cur_time_tuple) + (0, 0, 0))
+        today_sunrise_time_tuple = self.sun_wait.get_sunrise_time(cur_time_tuple)
+        today_sunset_time_tuple = self.sun_wait.get_sunset_time(cur_time_tuple)
+        sunrise_time = time.mktime(today_sunrise_time_tuple + (0, 0, 0))
+        sunset_time = time.mktime(today_sunset_time_tuple + (0, 0, 0))
         if sunset_time - sunrise_time < 0:
             raise ValueError('Error in computing sunrise and sunset !!')
-
-        __status = read_status()
 
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
             sleep_time = raw_sleep_time - self.additional_sleep_time
-            __text = f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
+            __text = (f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
+                      f" à {today_sunrise_time_tuple}")
             mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
             raw_sleep_time = sunset_time - cur_time
             sleep_time = raw_sleep_time + self.additional_sleep_time
-            __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s"
+            __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s à {today_sunset_time_tuple}"
             mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
             tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
-            sunrise_time = time.mktime(self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0)) + (0, 0, 0))
+            tomorrow_sunrise_time_tuple = self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0))
+            sunrise_time = time.mktime(tomorrow_sunrise_time_tuple + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
             sleep_time = raw_sleep_time - self.additional_sleep_time
-            __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin"
+            __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin à {tomorrow_sunrise_time_tuple}"
             mode = MODE_OUVERTURE
         self.__print_log(__text)
         if sleep_time < 0:
