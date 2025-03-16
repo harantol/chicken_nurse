@@ -11,8 +11,8 @@ def disconnect(wlan: network.WLAN):
 
 
 def connnect(verbose=True, ssid_pwd: [str, str] = [
-    ("Sosh", "PTit3F33"),
-    ("TitFeeTel", "Montagne09!")
+    ("TitFeeTel", "Montagne09!"),
+    ("Sosh", "PTit3F33")
 ]) -> network.WLAN:
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -26,7 +26,7 @@ def connnect(verbose=True, ssid_pwd: [str, str] = [
             if wlan.status() < 0 or wlan.status() >= 3:
                 if wlan.status() == 3:
                     if verbose:
-                        print('connected')
+                        print(f'connected to {ssid}')
                         print('IP: ', wlan.ifconfig()[0])
                     return wlan
             wait -= 1
@@ -43,8 +43,8 @@ def connnect(verbose=True, ssid_pwd: [str, str] = [
 
 
 def debug_wlan_connection(ssid_pwd=[
-    ("Sosh", "PTit3F33"),
-    ("TitFeeTel", "Montagne09!")
+    ("TitFeeTel", "Montagne09!"),
+    ("Sosh", "PTit3F33")
 ], verbose: bool = False):
     import network
     import requests
