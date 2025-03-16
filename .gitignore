@@ -59,3 +59,5 @@ target/
 venv/
 
 .idea/
+micro_python/*_chicken.log
+archives_logs
