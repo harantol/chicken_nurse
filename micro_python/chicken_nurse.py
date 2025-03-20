@@ -80,9 +80,13 @@ class ChickenNurse:
             wlan = wlan_connection.connnect(verbose=True)
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
-            dt, delta_sec = set_local_time()
+            time_tuple, delta_sec = set_local_time()
+            #(tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
             self.time_zone = int(delta_sec / 3600)
-            initial_time = (dt[0], dt[1], dt[2], dt[6], dt[3], dt[4], dt[5], 0)
+            initial_time = (time_tuple[0], time_tuple[1], time_tuple[2], time_tuple[6], time_tuple[3], time_tuple[4], time_tuple[5], 0)
+            initial_time_seconds = time.mktime(initial_time)  # local time in seconds
+            # Convert to tuple compatible with the library
+            initial_time = urtc.seconds2tuple(initial_time_seconds)
             print(initial_time)
             # Or get the local time from the system
             # initial_time_tuple = time.localtime()  # tuple (microPython)
