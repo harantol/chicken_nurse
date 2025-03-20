@@ -262,7 +262,7 @@ class ChickenNurse:
             lightsleep(MAX_SLEEP_DURATION)
             delay += MAX_SLEEP_DURATION
         lightsleep(seconds * 1000 - delay)
-        self.rtc.datetime(RTC().datetime())
+        self.__init__rtc()
 
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
