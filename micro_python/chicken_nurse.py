@@ -76,7 +76,7 @@ class ChickenNurse:
             self.rtc.datetime()
             self.__print_log('RTC OK')
         except OSError as e:
-            self.__print_log(f'RTC ERROR : {e}')
+            self.__print_log(f'RTC ERROR')
             self.rtc = RTC()
 
     def __init_clock(self):
@@ -112,6 +112,7 @@ class ChickenNurse:
                 while True:
                     self.__run_loop()
         except:
+            self.__print_log("RUN LOOP fails")
             self.__open_door()
 
     def __run_loop(self):
@@ -128,7 +129,7 @@ class ChickenNurse:
         self.__check_status_and_action(mode)
 
         self.__print_log(
-            f"2- Prochaine {mode} le {self.__localtime_to_string(time.gmtime(_sleep_time + time.mktime(_time)))}")
+            f"2- Prochaine {mode} le {self.__localtime_to_string(time.gmtime(_sleep_time + urtc.tuple2seconds(_time)))}")
 
         # Sleep......
         self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
@@ -175,7 +176,7 @@ class ChickenNurse:
             cur_time_tuple = self.rtc.datetime()
         else:
             cur_time_tuple = loc_time
-        cur_time = time.mktime(cur_time_tuple)
+        cur_time = urtc.tuple2seconds(cur_time_tuple)
         today_sunrise_time_tuple = self.sun_wait.get_sunrise_time(cur_time_tuple)
         today_sunset_time_tuple = self.sun_wait.get_sunset_time(cur_time_tuple)
         sunrise_time = time.mktime(today_sunrise_time_tuple + (0, 0, 0))
