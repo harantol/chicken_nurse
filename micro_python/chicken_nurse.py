@@ -142,9 +142,7 @@ class ChickenNurse:
         self.__write_log_file()
 
     def __print_log(self, text):
-        text = (self.__localtime_to_string(time.localtime()) + " " +
-                self.__datetime_to_string(self.rtc.datetime()) + " || " + text)
-        # text = self.__time_to_string(time.localtime()) + " || " + text
+        text = (self.__datetime_to_string(self.rtc.datetime()) + " || " + text)
         self.print_(text)
         self.log_txt += text + '\n'
 
