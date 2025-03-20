@@ -13,7 +13,7 @@ def get_www(www: str = url_worldtimeapi):
     return requests.get(www, timeout=10)
 
 
-def get_local_time()->(time.localtime, int):
+def get_local_time_from_the_web()->(time.localtime, int):
     response = get_www(url_worldtimeapi)
     print(response.status_code)
     if response.status_code == 200:
@@ -35,7 +35,7 @@ def set_local_time(rtc: RTC = RTC()) -> int:
     while tries <= max_tries:
         print(f"{tries}/{max_tries}...")
         try:
-            dt, delta_sec = get_local_time()
+            dt, delta_sec = get_local_time_from_the_web()
             rtc.datetime((dt[0], dt[1], dt[2], dt[6], dt[3], dt[4], dt[5], 0))
             return delta_sec
         except OSError:
@@ -44,4 +44,5 @@ def set_local_time(rtc: RTC = RTC()) -> int:
         except ValueError:
             tries += 1
             time.sleep(1)
+
     raise RuntimeError(f'Impossible to access {url_worldtimeapi}')
