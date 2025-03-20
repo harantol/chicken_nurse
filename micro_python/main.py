@@ -11,11 +11,5 @@ if __name__ == "__main__":
             print(f'Exception ! open door !')
             open_door()
     else:
-        from wlan_connection import debug_wlan_connection
-
-        ssid_pwd = [
-            ("Androliv", "PTit3F33"),
-            ("TitFeeTel", "Montagne09!")
-        ]
-
-        debug_wlan_connection(ssid_pwd=ssid_pwd, verbose=True)
+        chik = ChickenNurse(debug=True, use_deep_sleep=False, verbose=True)
+        chik.run()
