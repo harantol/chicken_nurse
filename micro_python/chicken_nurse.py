@@ -129,7 +129,7 @@ class ChickenNurse:
         self.__check_status_and_action(mode)
 
         self.__print_log(
-            f"2- Prochaine {mode} le {self.__time_to_string(time.gmtime(_sleep_time + time.mktime(_time)))}")
+            f"2- Prochaine {mode} le {self.__localtime_to_string(time.gmtime(_sleep_time + time.mktime(_time)))}")
 
         # Sleep......
         self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
@@ -146,8 +146,8 @@ class ChickenNurse:
         self.__write_log_file()
 
     def __print_log(self, text):
-        text = (self.__time_to_string(time.localtime()) + " " +
-                self.__time_to_string(self.rtc.datetime()) + " || " + text)
+        text = (self.__localtime_to_string(time.localtime()) + " " +
+                self.__localtime_to_string(self.rtc.datetime()) + " || " + text)
         # text = self.__time_to_string(time.localtime()) + " || " + text
         self.print_(text)
         self.log_txt += text + '\n'
@@ -247,8 +247,11 @@ class ChickenNurse:
         self.__exec_with_blinking(period=period, callable=open_door)
 
     @staticmethod
-    def __time_to_string(n):
+    def __localtime_to_string(n):
         return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
+    @staticmethod
+    def __datetime_to_string(n):
+        return f"{n[2]}/{n[1]}/{n[0]} à {n[4]}:{n[5]}:{n[6]}"
 
     def __deep_sleep(self, seconds: int) -> None:
         time.sleep(1)
