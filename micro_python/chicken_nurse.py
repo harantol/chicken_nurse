@@ -33,6 +33,12 @@ GPIO_RTC_SDA = 4
 
 class ChickenNurse:
     def __init__(self, debug: bool = False, use_deep_sleep: bool = True, verbose: bool = False) -> None:
+
+        self.use_deep_sleep = use_deep_sleep
+        self.debug = debug
+        self.verbose = verbose
+        self.log_txt = ""
+
         self.led = Pin("LED", Pin.OUT)
         self.led.on()
 
@@ -40,10 +46,6 @@ class ChickenNurse:
         self.rtc = None
         self.__init__rtc()
 
-        self.use_deep_sleep = use_deep_sleep
-        self.debug = debug
-        self.verbose = verbose
-        self.log_txt = ""
         self.time_zone = TIME_ZONE
         self.log_file = LOGFILE
         self._clean_status()
