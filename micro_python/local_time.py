@@ -17,11 +17,17 @@ def get_local_time_from_the_web() -> (time.localtime, int):
     if response.status_code == 200:
         parsed = response.json()
         print(parsed)
+        # {'utc_datetime': '2025-03-20T22:39:05.920774+00:00', 'timezone': 'Europe/Paris',
+        #                                                                       , 'utc_offset': '+01:00', 'unixtime': 1742510345, 'week_number': 12, 'raw_offset'
+        #                                                                       ': 3600, 'dst_from': None, 'datetime': '2025-03-20T23:39:05.920774+01:00', 'clien
+        #                                                                       nt_ip': '92.184.112.172', 'abbreviation': 'CET', 'day_of_year': 79, 'day_of_week'
+        #                                                                       ': 4, 'dst': False, 'dst_offset': 0, 'dst_until': None}
+
         # parsed['unixtime']: local unixtime since 1970/01/01 00:00:00)
         # parsed['raw_offset']: timezone hour offset
         # 946684800: unixtime of 2020/01/01 00:00:00 (system start time on MicroPython)
         # generate datetime tuple based on these information
-        return time.localtime(parsed['unixtime'] + parsed['raw_offset']), parsed['raw_offset']
+        return time.localtime(parsed['unixtime'] + parsed['raw_offset']), parsed['raw_offset'] # -> (tm_year,tm_mon,tm_mday,tm_hour,tm_min, tm_sec,tm_wday,tm_yday,tm_isdst)
         # rtc.datetime((year, month, day, weekday, hour, minute, second, microsecond))
     else:
         raise OSError(f'Impossible to access {url_worldtimeapi}')
