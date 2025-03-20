@@ -36,14 +36,16 @@ class ChickenNurse:
         self.led = Pin("LED", Pin.OUT)
         self.led.on()
 
+        # clock
+        self.rtc = None
+        self.__init__rtc()
+
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
         self.verbose = verbose
         self.log_txt = ""
         self.time_zone = TIME_ZONE
-        self.rtc = RTC()
         self.log_file = LOGFILE
-
         self._clean_status()
 
         self.__init_clock()
@@ -60,6 +62,16 @@ class ChickenNurse:
         self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[3]}_{n[4]}_{n[5]}_" + LOGFILE
         self.__write_log_file('w')  # erase exisiting log
 
+    def __init__rtc(self):
+        try:
+            i2c_rtc = I2C(0, scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA))
+            self.rtc = urtc.DS1307(i2c_rtc)
+            self.rtc.datetime()
+            print('RTC OK')
+        except OSError as e:
+            print(f'RTC ERROR : {e}')
+            self.rtc = RTC()
+
     def __init_clock(self):
         timer = Timer()
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
@@ -68,11 +80,6 @@ class ChickenNurse:
             wlan = wlan_connection.connnect(verbose=True)
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
-            try:
-                self.rtc = urtc.DS1307(SoftI2C(scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA)))
-            except OSError as e:
-                print(f'RTC ERROR : {e}')
-                self.rtc = RTC()
             self.time_zone = int(set_local_time(rtc=self.rtc) / 3600)
             # local_time.set_local_time(rtc=self.clock)
             self.__print_log(f"Set local time OK.")
