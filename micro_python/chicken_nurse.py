@@ -1,7 +1,6 @@
 import datetime
 from datetime import date
 
-
 # import picosleep
 from sun import Sun
 
@@ -30,6 +29,7 @@ MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
 GPIO_RTC_SCL = 5
 GPIO_RTC_SDA = 4
+
 
 class ChickenNurse:
     def __init__(self, debug: bool = False, use_deep_sleep: bool = True, verbose: bool = False) -> None:
@@ -81,17 +81,13 @@ class ChickenNurse:
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
             time_tuple, delta_sec = set_local_time()
-            #(tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
+            # (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
             self.time_zone = int(delta_sec / 3600)
-            initial_time = (time_tuple[0], time_tuple[1], time_tuple[2], time_tuple[6], time_tuple[3], time_tuple[4], time_tuple[5], 0)
+            initial_time = (
+            time_tuple[0], time_tuple[1], time_tuple[2], time_tuple[6], time_tuple[3], time_tuple[4], time_tuple[5], 0)
             initial_time_seconds = time.mktime(initial_time)  # local time in seconds
             # Convert to tuple compatible with the library
             initial_time = urtc.seconds2tuple(initial_time_seconds)
-            print(initial_time)
-            # Or get the local time from the system
-            # initial_time_tuple = time.localtime()  # tuple (microPython)
-            # initial_time_seconds = time.mktime(initial_time_tuple)  # local time in seconds
-            # initial_time = urtc.seconds2tuple(initial_time_seconds)
             self.rtc.datetime(initial_time)
             self.__print_log(f"Set local time OK.")
             time.sleep(2)
@@ -249,6 +245,7 @@ class ChickenNurse:
     @staticmethod
     def __localtime_to_string(n):
         return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
+
     @staticmethod
     def __datetime_to_string(n):
         return f"{n[2]}/{n[1]}/{n[0]} à {n[4]}:{n[5]}:{n[6]}"
