@@ -66,7 +66,7 @@ class ChickenNurse:
             self.additional_sleep_time = OFFSET_SEC
 
         n = self.rtc.datetime()
-        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[3]}_{n[4]}_{n[5]}_" + LOGFILE
+        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE
         self.__write_log_file('w')  # erase exisiting log
 
     def __init__rtc(self):
