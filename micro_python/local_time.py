@@ -29,15 +29,14 @@ def get_local_time_from_the_web()->(time.localtime, int):
         raise OSError(f'Impossible to access {url_worldtimeapi}')
 
 
-def set_local_time(rtc: RTC = RTC()) -> int:
+def set_local_time() -> (time.localtime, int):
     tries = 0
     max_tries = 100
     while tries <= max_tries:
         print(f"{tries}/{max_tries}...")
         try:
             dt, delta_sec = get_local_time_from_the_web()
-            rtc.datetime((dt[0], dt[1], dt[2], dt[6], dt[3], dt[4], dt[5], 0))
-            return delta_sec
+            return dt, delta_sec
         except OSError:
             tries += 1
             time.sleep(1)
