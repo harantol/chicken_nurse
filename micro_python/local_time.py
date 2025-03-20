@@ -2,9 +2,7 @@
 Source : https://github.com/itechnofrance/micropython/blob/master/meteo/meteo.py
 """
 import requests
-import urequests
 import time
-from machine import RTC
 
 url_worldtimeapi = "http://worldtimeapi.org/api/timezone/Europe/Paris"
 
@@ -13,7 +11,7 @@ def get_www(www: str = url_worldtimeapi):
     return requests.get(www, timeout=10)
 
 
-def get_local_time_from_the_web()->(time.localtime, int):
+def get_local_time_from_the_web() -> (time.localtime, int):
     response = get_www(url_worldtimeapi)
     print(response.status_code)
     if response.status_code == 200:
