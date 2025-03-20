@@ -85,9 +85,7 @@ class ChickenNurse:
             time_tuple, delta_sec = set_local_time()
             # (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
             self.time_zone = int(delta_sec / 3600)
-            initial_time = (
-            time_tuple[0], time_tuple[1], time_tuple[2], time_tuple[6], time_tuple[3], time_tuple[4], time_tuple[5], 0)
-            initial_time_seconds = time.mktime(initial_time)  # local time in seconds
+            initial_time_seconds = time.mktime(time_tuple)  # local time in seconds
             # Convert to tuple compatible with the library
             initial_time = urtc.seconds2tuple(initial_time_seconds)
             self.rtc.datetime(initial_time)
