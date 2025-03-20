@@ -50,7 +50,12 @@ class ChickenNurse:
         self.log_file = LOGFILE
         self._clean_status()
 
-        self.__init_clock()
+        try:
+            self.__init_clock()
+        except RuntimeError as e:
+            self.__print_log(str(e))
+            self.__print_log(f"FAIL Set local time.")
+            pass
 
         self.sun_wait = Sun(lat=LATITUDE, lon=LONGITUDE, tzone=self.time_zone)
 
@@ -77,8 +82,8 @@ class ChickenNurse:
     def __init_clock(self):
         timer = Timer()
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
-        self.__print_log(f"WIFI connexion......")
         try:
+            self.__print_log(f"WIFI connexion......")
             wlan = wlan_connection.connnect(verbose=True)
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
@@ -95,9 +100,7 @@ class ChickenNurse:
             wlan_connection.disconnect(wlan)
         except RuntimeError as e:
             timer.deinit()
-            self.__print_log("WIFI connexion failed, stay opened !")
-            self.__open_door(period=2000)
-            self.__write_log_file()
+            self.__print_log("WIFI connexion failed !")
             raise RuntimeError(e)
 
     def run(self):
