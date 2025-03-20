@@ -80,6 +80,8 @@ class ChickenNurse:
             self.rtc = RTC()
 
     def __init_clock(self):
+        if self.rtc is None:
+            self.__init__rtc()
         timer = Timer()
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         try:
