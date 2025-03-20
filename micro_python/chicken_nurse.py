@@ -4,7 +4,8 @@ from datetime import date
 # import picosleep
 from sun import Sun
 
-from machine import Pin, RTC, lightsleep, Timer
+from machine import Pin, lightsleep, Timer, SoftI2C, RTC
+import urtc
 import time
 
 from commandes_moteur import STATUS_CLOSING, STATUS_OPENING, STATUS_CLOSED, STATUS_OPENED, open_door, close_door, stop, \
@@ -26,6 +27,8 @@ MAX_SLEEP_DURATION = 71 * 60 * 1000  # milliseconds
 LOGFILE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
+GPIO_RTC_SCL = 5
+GPIO_RTC_SDA = 6
 
 
 class ChickenNurse:
@@ -38,7 +41,7 @@ class ChickenNurse:
         self.verbose = verbose
         self.log_txt = ""
         self.time_zone = TIME_ZONE
-        self.clock = None
+        self.rtc = RTC()
         self.log_file = LOGFILE
 
         self._clean_status()
@@ -53,7 +56,7 @@ class ChickenNurse:
         else:
             self.additional_sleep_time = OFFSET_SEC
 
-        n = time.localtime()
+        n = self.rtc.datetime()
         self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[3]}_{n[4]}_{n[5]}_" + LOGFILE
         self.__write_log_file('w')  # erase exisiting log
 
@@ -65,8 +68,12 @@ class ChickenNurse:
             wlan = wlan_connection.connnect(verbose=True)
             self.__print_log(f"WIFI connexion OK.")
             self.__print_log(f"Set local time ...")
-            self.clock = RTC()
-            self.time_zone = int(set_local_time(rtc=self.clock)/3600)
+            try:
+                self.rtc = urtc.DS1307(SoftI2C(scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA)))
+            except OSError as e:
+                print(f'RTC ERROR : {e}')
+                self.rtc = RTC()
+            self.time_zone = int(set_local_time(rtc=self.rtc) / 3600)
             # local_time.set_local_time(rtc=self.clock)
             self.__print_log(f"Set local time OK.")
             time.sleep(2)
@@ -92,7 +99,7 @@ class ChickenNurse:
 
     def __run_loop(self):
         # Current time :
-        _time = time.localtime()
+        _time = self.rtc.datetime()
         self.__print_log(f"********* RUN LOOP *************")
         self.__print_log(f"0- la porte est {read_status()}")
 
@@ -148,7 +155,7 @@ class ChickenNurse:
     def __get_next_step_and_sleep_time(self, loc_time=None):
 
         if loc_time is None:
-            cur_time_tuple = time.localtime()
+            cur_time_tuple = self.rtc.datetime()
         else:
             cur_time_tuple = loc_time
         cur_time = time.mktime(cur_time_tuple)
@@ -231,7 +238,7 @@ class ChickenNurse:
             lightsleep(MAX_SLEEP_DURATION)
             delay += MAX_SLEEP_DURATION
         lightsleep(seconds * 1000 - delay)
-        self.clock.datetime(RTC().datetime())
+        self.rtc.datetime(RTC().datetime())
 
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
