@@ -78,7 +78,7 @@ class ChickenNurse:
     def __init__rtc(self):
         try:
             i2c_rtc = I2C(0, scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA))
-            self.rtc = urtc.DS1307(i2c_rtc)
+            self.rtc = urtc.DS3231(i2c_rtc)
             self.rtc.datetime()
             self.__print_log('RTC OK')
         except OSError as e:
