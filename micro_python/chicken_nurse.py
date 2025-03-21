@@ -32,7 +32,10 @@ GPIO_RTC_SDA = 4
 
 
 class ChickenNurse:
-    def __init__(self, debug: bool = False, use_deep_sleep: bool = True, verbose: bool = False) -> None:
+    def __init__(self,
+                 debug: bool = False,
+                 use_deep_sleep: bool = True,
+                 verbose: bool = False) -> None:
 
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
@@ -101,16 +104,12 @@ class ChickenNurse:
         wlan_connection.disconnect(wlan)
 
     def run(self):
-        try:
-            if self.debug:
-                for _ in range(100):
-                    self.__run_loop()
-            else:
-                while True:
-                    self.__run_loop()
-        except:
-            self.__print_log("RUN LOOP fails")
-            self.__open_door()
+        if self.debug:
+            for _ in range(100):
+                self.__run_loop()
+        else:
+            while True:
+                self.__run_loop()
 
     def __run_loop(self):
         # Current time :
