@@ -51,8 +51,11 @@ class ChickenNurse:
 
         self.time_zone = TIME_ZONE
         self.log_file = LOGFILE_BASE
+
+        # clean door state
         self._clean_status()
 
+        # init clock from the web or the external RTC or the internal RTC
         timer = Timer()
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         try:
@@ -75,15 +78,15 @@ class ChickenNurse:
         self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
         self.__write_log_file('w')  # erase exisiting log
 
-    def __init__rtc(self):
+    def __init__rtc(self) -> None:
         try:
             i2c_rtc = I2C(0, scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA))
             self.rtc = urtc.DS3231(i2c_rtc)
             self.rtc.datetime()
             self.__print_log('RTC OK')
         except OSError as e:
-            self.__print_log(f'RTC ERROR')
             self.rtc = RTC()
+            self.__print_log(f'RTC ERROR')
 
     def __init_clock(self):
         if self.rtc is None:
@@ -276,15 +279,7 @@ class ChickenNurse:
             self.__deep_sleep(seconds=seconds)
         else:
             self.led.off()
-            if self.debug:
-                t_init = self.rtc.datetime()
-                dt = 0
-                while dt < seconds:
-                    self.__print_log(f"{seconds - dt}")
-                    time.sleep(1)
-                    dt = urtc.tuple2seconds(self.rtc.datetime()) - urtc.tuple2seconds(t_init)
-            else:
-                time.sleep(seconds)
+            time.sleep(seconds)
 
         self.led.on()
         self.__print_log(f"... bonjour, la porte est {read_status()}")
