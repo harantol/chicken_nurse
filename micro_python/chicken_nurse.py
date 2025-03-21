@@ -40,6 +40,7 @@ class ChickenNurse:
 
         self.use_deep_sleep = use_deep_sleep
         self.debug = debug
+        self.next_mode = None
         self.verbose = verbose
         self.log_txt = ""
 
@@ -52,11 +53,12 @@ class ChickenNurse:
         self.sqw_pin = None
         self.__init__rtc()
 
+        self.__init_log_file()
+
         self.time_zone = TIME_ZONE
         self.log_file = LOGFILE_BASE
 
-        # clean door state
-        self._clean_status()
+        self._stop_door()
 
         # init clock from the web or the external RTC or the internal RTC
         timer = Timer()
@@ -77,6 +79,7 @@ class ChickenNurse:
         else:
             self.additional_sleep_time = SUN_OFFSET_SEC
 
+    def __init_log_file(self):
         n = self.rtc.datetime()
         self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
         self.__write_log_file('w')  # erase exisiting log
@@ -88,7 +91,7 @@ class ChickenNurse:
             self.rtc = urtc.DS3231(i2c_rtc)
             self.rtc.datetime()
             # Attach the interrupt callback
-            self.sqw_pin.irq(trigger=Pin.IRQ_FALLING, handler=self.on_alarm)
+            self.sqw_pin.irq(trigger=Pin.IRQ_FALLING, handler=self.__run_loop)
             self.__print_log('RTC OK')
         except OSError as e:
             self.rtc = RTC()
@@ -135,22 +138,29 @@ class ChickenNurse:
         self.__print_log(f"0- la porte est {read_status()}")
 
         # Compute sleep duration time:
-        _sleep_time, mode = self.__compute_sunwait_and_sleep_time(loc_time_tuple=_time)
+        _sleep_time = self.__compute_sunwait_and_sleep_time(loc_time_tuple=_time)
         if self.debug:
-            _sleep_time, mode = self.__get_next_step_and_time__debug(loc_time_tuple=_time)
+            _sleep_time = self.__get_next_step_and_time__debug(loc_time_tuple=_time)
 
-        self.__check_status_and_action(mode)
+        self.__check_status_and_action()
 
         self.__print_log(
-            f"2- Prochaine {mode} le {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))}")
+            f"2- Prochaine {self.next_mode} le {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))}")
 
         # Sleep......
         self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
         self.__sleep(_sleep_time)
-        self.__print_log(f"****************************\n C'est l'heure ! {mode}")
+
+        # Code a priori inaccessible en mode deep sleep:
+        if self.use_deep_sleep:
+            self.__print_log(f"!!!!!!!!!!!!!!! MODE DEEP SLEEP CODE INACCESSIBLE")
+        self.led.on()
+        self.__print_log(
+            f"C'est l'heure ! la porte est {read_status()} {self.next_mode}")
+        self.__write_log_file()
 
         # ACTION ouverture ou fermeture :
-        self.__toggle_chicken_nurse(mode)
+        self.__toggle_chicken_nurse(self.next_mode)
 
         # Attente résiduelle avant
         # self.__print_log(f"4- Additional sleep {2 * self.additional_sleep_time:1.2f}s")
@@ -163,8 +173,8 @@ class ChickenNurse:
         self.print_(text)
         self.log_txt += text + '\n'
 
-    def _clean_status(self):
-        self.__print_log('CLEAN STATUS...')
+    def _stop_door(self):
+        self.__print_log('STOP...')
         stop()
 
     def quit(self):
@@ -176,11 +186,13 @@ class ChickenNurse:
         else:
             print(msg)
 
-    def __check_status_and_action(self, mode):
+    def __check_status_and_action(self):
         __status = read_status()
-        if mode == MODE_OUVERTURE and __status != STATUS_CLOSED:
+        if self.next_mode == MODE_OUVERTURE and __status != STATUS_CLOSED:
+            if __status == STATUS_OPENING:
+                self.__open_door()  # if door was opening, finish it before closing. Else rope may reach over end !!
             self.__close_door()  # La porte ne devrait pas être ouverte !
-        elif mode == MODE_FERMETURE and __status != STATUS_OPENED:
+        elif self.next_mode == MODE_FERMETURE and __status != STATUS_OPENED:
             self.__open_door()  # La porte ne devrait pas être fermée !
 
     def __compute_sunwait_and_sleep_time(self, loc_time_tuple: urtc.DateTimeTuple):
@@ -208,13 +220,13 @@ class ChickenNurse:
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
             __text = (f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
                       f" à {today_sunrise_time_tuple}")
-            mode = MODE_OUVERTURE
+            self.next_mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
             raw_sleep_time = sunset_time - cur_time
             sleep_time_s = raw_sleep_time + self.additional_sleep_time
             __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s à {today_sunset_time_tuple}"
-            mode = MODE_FERMETURE
+            self.next_mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
             tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
             tomorrow_sunrise_time_tuple = self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0))
@@ -222,14 +234,14 @@ class ChickenNurse:
             raw_sleep_time = sunrise_time - cur_time
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
             __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin à {tomorrow_sunrise_time_tuple}"
-            mode = MODE_OUVERTURE
+            self.next_mode = MODE_OUVERTURE
         self.__print_log(__text)
         if sleep_time_s < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
 
         self.setup_alarms(sleep_time_s=sleep_time_s, cur_time=cur_time)
-        return sleep_time_s, mode
+        return sleep_time_s
 
     # Callback for handling alarm interrupt.
     def on_alarm(self):
@@ -272,9 +284,11 @@ class ChickenNurse:
         self.setup_alarms(sleep_time_s=DEBUG_SLEEP_TIME, cur_time=urtc.tuple2seconds(loc_time_tuple))
 
         if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
-            return DEBUG_SLEEP_TIME, MODE_OUVERTURE
+            self.next_mode = MODE_OUVERTURE
+            return DEBUG_SLEEP_TIME
         elif __status == STATUS_OPENED or __status == STATUS_OPENING:
-            return DEBUG_SLEEP_TIME, MODE_FERMETURE
+            self.next_mode = MODE_FERMETURE
+            return DEBUG_SLEEP_TIME
 
     def __write_log_file(self, mode: str = 'a'):
         with open(self.log_file, mode) as file:
@@ -286,13 +300,17 @@ class ChickenNurse:
 
     def __toggle_chicken_nurse(self, mode):
         if mode == MODE_FERMETURE:
-            self.__print_log(f"door is {read_status()} : now closing...")
+            if self.verbose:
+                self.__print_log(f"door is {read_status()} : now closing...")
             self.__close_door()
-            self.__print_log(f"door {read_status()}.\n")
+            if self.verbose:
+                self.__print_log(f"door {read_status()}.")
         elif mode == MODE_OUVERTURE:
-            self.__print_log(f"door is {read_status()} : now opening...")
+            if self.verbose:
+                self.__print_log(f"door is {read_status()} : now opening...")
             self.__open_door()
-            self.__print_log(f"door {read_status()}.")
+            if self.verbose:
+                self.__print_log(f"door {read_status()}.")
         else:
             raise ValueError(f"{mode} is unknown")
 
@@ -307,7 +325,10 @@ class ChickenNurse:
         return f"{n[2]}/{n[1]}/{n[0]} à {n[4]:02d}:{n[5]:02d}:{n[6]:02d}"
 
     def __deep_sleep(self, seconds: int) -> None:
-        deepsleep(seconds)
+        self.led.off()
+        if self.verbose:
+            self.__print_log("DEEPSLEEP NOW !")
+        deepsleep()
 
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
@@ -318,10 +339,6 @@ class ChickenNurse:
         else:
             self.led.off()
             time.sleep(seconds)
-
-        self.led.on()
-        self.__print_log(f"... bonjour, la porte est {read_status()}")
-        self.__write_log_file()
 
     def __exec_with_blinking(self, period: int, callable):
         timer = Timer()
