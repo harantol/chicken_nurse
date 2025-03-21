@@ -266,7 +266,16 @@ class ChickenNurse:
             self.__deep_sleep(seconds=seconds)
         else:
             self.led.off()
-            time.sleep(seconds)
+            if self.debug:
+                t_init = self.rtc.datetime()
+                dt = 0
+                while dt < seconds:
+                    self.__print_log(f"{seconds - dt}")
+                    time.sleep(1)
+                    dt = urtc.tuple2seconds(self.rtc.datetime()) - urtc.tuple2seconds(t_init)
+            else:
+                time.sleep(seconds)
+
         self.led.on()
         self.__print_log(f"... bonjour, la porte est {read_status()}")
         self.__write_log_file()
