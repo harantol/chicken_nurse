@@ -4,7 +4,7 @@ from datetime import date
 # import picosleep
 from sun import Sun
 
-from machine import Pin, lightsleep, Timer, I2C, RTC
+from machine import Pin, lightsleep, Timer, I2C, RTC, deepsleep
 import urtc
 import time
 
@@ -307,14 +307,7 @@ class ChickenNurse:
         return f"{n[2]}/{n[1]}/{n[0]} à {n[4]:02d}:{n[5]:02d}:{n[6]:02d}"
 
     def __deep_sleep(self, seconds: int) -> None:
-        time.sleep(1)
-        self.led.off()
-        delay = 0
-        while (delay + MAX_DEEPSLEEP_DURATION_MS) < (seconds * 1000):
-            lightsleep(MAX_DEEPSLEEP_DURATION_MS)
-            delay += MAX_DEEPSLEEP_DURATION_MS
-        lightsleep(seconds * 1000 - delay)
-        self.__init__rtc()
+        deepsleep(seconds)
 
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
