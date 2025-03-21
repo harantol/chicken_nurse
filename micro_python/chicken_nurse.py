@@ -126,14 +126,14 @@ class ChickenNurse:
         self.__print_log(f"0- la porte est {read_status()}")
 
         # Compute sleep duration time:
-        _sleep_time, mode = self.__get_next_step_and_sleep_time(loc_time_tuple=_time)
+        _sleep_time, mode = self.__compute_sunwait_and_sleep_time(loc_time_tuple=_time)
         if self.debug:
             _sleep_time, mode = self.__get_next_step_and_time__debug()
 
         self.__check_status_and_action(mode)
 
         self.__print_log(
-            f"2- Prochaine {mode} le {self.__localtime_to_string(time.gmtime(_sleep_time + urtc.tuple2seconds(_time)))}")
+            f"2- Prochaine {mode} le {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))} {_time}")
 
         # Sleep......
         self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
@@ -174,9 +174,20 @@ class ChickenNurse:
         elif mode == MODE_FERMETURE and __status != STATUS_OPENED:
             self.__open_door()  # La porte ne devrait pas être fermée !
 
-    def __get_next_step_and_sleep_time(self, loc_time_tuple: urtc.DateTimeTuple):
-        cur_time = urtc.tuple2seconds(loc_time_tuple)
-        today_sunrise_time_tuple = self.sun_wait.get_sunrise_time(loc_time_tuple)
+    def __compute_sunwait_and_sleep_time(self, loc_time_tuple: urtc.DateTimeTuple):
+        cur_time = urtc.tuple2seconds(loc_time_tuple)  # conversion from urtc to second
+        loc_time_tuple = (
+            loc_time_tuple.year,
+            loc_time_tuple.month,
+            loc_time_tuple.day,
+            loc_time_tuple.hour,
+            loc_time_tuple.minute,
+            loc_time_tuple.second,
+            loc_time_tuple.weekday,
+            0)  # conversion from utc to localtime()
+        # From here cur_time is an integer second:
+        today_sunrise_time_tuple = self.sun_wait.get_sunrise_time(
+            loc_time_tuple)  # input (year, month, mday, hour, minute, second, weekday, yearday)
         today_sunset_time_tuple = self.sun_wait.get_sunset_time(loc_time_tuple)
         sunrise_time = time.mktime(today_sunrise_time_tuple + (0, 0, 0))
         sunset_time = time.mktime(today_sunset_time_tuple + (0, 0, 0))
