@@ -22,13 +22,14 @@ LONGITUDE = 5.586088
 TIME_ZONE = 1
 SUN_OFFSET_SEC = 1800  # seconds
 SUN_OFFSET_SEC__DEBUG = 5  # seconds
-DEBUG_SLEEP_TIME = 3  # seconds
+DEBUG_SLEEP_TIME = 5  # seconds
 MAX_DEEPSLEEP_DURATION_MS = 71 * 60 * 1000  # milliseconds
 LOGFILE_BASE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
 GPIO_RTC_SCL = 5
 GPIO_RTC_SDA = 4
+GPIO_RTC_SQW = 3
 
 
 class ChickenNurse:
@@ -45,8 +46,10 @@ class ChickenNurse:
         self.led = Pin("LED", Pin.OUT)
         self.led.on()
 
-        # clock
+        # DS3231 rtc init
+        self.alarm_time: urtc.seconds2tuple = None
         self.rtc = None
+        self.sqw_pin = None
         self.__init__rtc()
 
         self.time_zone = TIME_ZONE
@@ -81,8 +84,11 @@ class ChickenNurse:
     def __init__rtc(self) -> None:
         try:
             i2c_rtc = I2C(0, scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA))
+            self.sqw_pin = Pin(GPIO_RTC_SQW, Pin.IN, Pin.PULL_UP)
             self.rtc = urtc.DS3231(i2c_rtc)
             self.rtc.datetime()
+            # Attach the interrupt callback
+            self.sqw_pin.irq(trigger=Pin.IRQ_FALLING, handler=self.on_alarm)
             self.__print_log('RTC OK')
         except OSError as e:
             self.rtc = RTC()
@@ -131,7 +137,7 @@ class ChickenNurse:
         # Compute sleep duration time:
         _sleep_time, mode = self.__compute_sunwait_and_sleep_time(loc_time_tuple=_time)
         if self.debug:
-            _sleep_time, mode = self.__get_next_step_and_time__debug()
+            _sleep_time, mode = self.__get_next_step_and_time__debug(loc_time_tuple=_time)
 
         self.__check_status_and_action(mode)
 
@@ -199,14 +205,14 @@ class ChickenNurse:
 
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
-            sleep_time = raw_sleep_time - self.additional_sleep_time
+            sleep_time_s = raw_sleep_time - self.additional_sleep_time
             __text = (f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
                       f" à {today_sunrise_time_tuple}")
             mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
             raw_sleep_time = sunset_time - cur_time
-            sleep_time = raw_sleep_time + self.additional_sleep_time
+            sleep_time_s = raw_sleep_time + self.additional_sleep_time
             __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s à {today_sunset_time_tuple}"
             mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
@@ -214,18 +220,57 @@ class ChickenNurse:
             tomorrow_sunrise_time_tuple = self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0))
             sunrise_time = time.mktime(tomorrow_sunrise_time_tuple + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
-            sleep_time = raw_sleep_time - self.additional_sleep_time
+            sleep_time_s = raw_sleep_time - self.additional_sleep_time
             __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin à {tomorrow_sunrise_time_tuple}"
             mode = MODE_OUVERTURE
         self.__print_log(__text)
-        if sleep_time < 0:
+        if sleep_time_s < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
-        return sleep_time, mode
 
-    def __get_next_step_and_time__debug(self):
+        self.setup_alarms(sleep_time_s=sleep_time_s, cur_time=cur_time)
+        return sleep_time_s, mode
+
+    # Callback for handling alarm interrupt.
+    def on_alarm(self):
+        self.__print_log("Interrupt detected.")
+
+        if self.rtc.alarm(alarm=0):  # Check if Alarm 1 triggered
+            if self.verbose:
+                self.__print_log("Alarm 1 triggered.")
+            self.rtc.alarm(False, alarm=0)  # Clear Alarm 1 flag
+
+    # Setup alarms on the DS3231
+    def setup_alarms(self, sleep_time_s: int, cur_time: int):
+        _alarm_time = urtc.seconds2tuple(sleep_time_s + cur_time)
+        self.alarm_time = urtc.DateTimeTuple(
+            year=_alarm_time.year,
+            month=_alarm_time.month,
+            day=_alarm_time.day,
+            hour=_alarm_time.hour,
+            minute=_alarm_time.minute,
+            second=_alarm_time.second,
+            millisecond=_alarm_time.millisecond,
+            weekday=None
+        )  # rtc.alarm_time can't specify both day and weekday
+
+        # Clear any existing alarms
+        self.rtc.alarm(False, 0)
+        self.rtc.no_interrupt()
+
+        # Set the desired alarm times
+        self.rtc.alarm_time(self.alarm_time, 0)  # Alarm 1
+
+        # Enable interrupts for the alarms
+        self.rtc.interrupt(0)
+        if self.verbose:
+            self.__print_log(f"Alarm set successfully à {self.__datetime_to_string(self.alarm_time)}.")
+
+    def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple):
         self.__print_log("1- debug : NO SUN, manual next step")
         __status = read_status()
+        self.setup_alarms(sleep_time_s=DEBUG_SLEEP_TIME, cur_time=urtc.tuple2seconds(loc_time_tuple))
+
         if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
             return DEBUG_SLEEP_TIME, MODE_OUVERTURE
         elif __status == STATUS_OPENED or __status == STATUS_OPENING:
