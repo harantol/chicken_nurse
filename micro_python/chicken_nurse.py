@@ -50,12 +50,15 @@ class ChickenNurse:
         self.log_file = LOGFILE
         self._clean_status()
 
+        timer = Timer()
+        timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         try:
             self.__init_clock()
         except RuntimeError as e:
             self.__print_log(str(e))
             self.__print_log(f"FAIL Set local time.")
             pass
+        timer.deinit()
 
         self.sun_wait = Sun(lat=LATITUDE, lon=LONGITUDE, tzone=self.time_zone)
 
@@ -82,28 +85,20 @@ class ChickenNurse:
     def __init_clock(self):
         if self.rtc is None:
             self.__init__rtc()
-        timer = Timer()
-        timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
-        try:
-            self.__print_log(f"WIFI connexion......")
-            wlan = wlan_connection.connnect(verbose=True)
-            self.__print_log(f"WIFI connexion OK.")
-            self.__print_log(f"Set local time ...")
-            time_tuple, delta_sec = set_local_time()
-            # (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
-            self.time_zone = int(delta_sec / 3600)
-            initial_time_seconds = time.mktime(time_tuple)  # local time in seconds
-            # Convert to tuple compatible with the library
-            initial_time = urtc.seconds2tuple(initial_time_seconds)
-            self.rtc.datetime(initial_time)
-            self.__print_log(f"Set local time OK.")
-            time.sleep(2)
-            timer.deinit()
-            wlan_connection.disconnect(wlan)
-        except RuntimeError as e:
-            timer.deinit()
-            self.__print_log("WIFI connexion failed !")
-            raise RuntimeError(e)
+        self.__print_log(f"WIFI connexion......")
+        wlan = wlan_connection.connnect(verbose=True)
+        self.__print_log(f"WIFI connexion OK.")
+        self.__print_log(f"Set local time ...")
+        time_tuple, delta_sec = set_local_time()
+        # (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
+        self.time_zone = int(delta_sec / 3600)
+        initial_time_seconds = time.mktime(time_tuple)  # local time in seconds
+        # Convert to tuple compatible with the library
+        initial_time = urtc.seconds2tuple(initial_time_seconds)
+        self.rtc.datetime(initial_time)
+        self.__print_log(f"Set local time OK.")
+        time.sleep(2)
+        wlan_connection.disconnect(wlan)
 
     def run(self):
         try:
