@@ -10,10 +10,10 @@ def disconnect(wlan: network.WLAN):
     time.sleep_ms(100)
 
 
-def connnect(verbose=True, ssid_pwd: [str, str] = [
-    ("TitFeeTel", "Montagne09!"),
-    ("Sosh", "PTit3F33")
-]) -> network.WLAN:
+def connnect(verbose=True) -> network.WLAN:
+    ssid_pwd: [str, str] = [
+        ("TitFeeTel", "Montagne09!")
+    ]
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     for (ssid, pwd) in ssid_pwd:
