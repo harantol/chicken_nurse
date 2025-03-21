@@ -35,7 +35,7 @@ def get_local_time_from_the_web() -> (time.localtime, int):
 
 def set_local_time() -> (time.localtime, int):
     tries = 0
-    max_tries = 100
+    max_tries = 10
     while tries <= max_tries:
         print(f"{tries}/{max_tries}...")
         try:
