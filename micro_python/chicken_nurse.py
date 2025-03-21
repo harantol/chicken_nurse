@@ -20,11 +20,11 @@ BLINK_INIT = 30  # ms
 LATITUDE = 45.343167
 LONGITUDE = 5.586088
 TIME_ZONE = 1
-OFFSET_SEC = 1800  # seconds
-OFFSET_SEC__DEBUG = 5  # seconds
-SLEEP_TIME__DEBUG = 3  # seconds
-MAX_SLEEP_DURATION = 71 * 60 * 1000  # milliseconds
-LOGFILE = "chicken.log"
+SUN_OFFSET_SEC = 1800  # seconds
+SUN_OFFSET_SEC__DEBUG = 5  # seconds
+DEBUG_SLEEP_TIME = 3  # seconds
+MAX_DEEPSLEEP_DURATION = 71 * 60 * 1000  # milliseconds
+LOGFILE_BASE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
 GPIO_RTC_SCL = 5
@@ -50,7 +50,7 @@ class ChickenNurse:
         self.__init__rtc()
 
         self.time_zone = TIME_ZONE
-        self.log_file = LOGFILE
+        self.log_file = LOGFILE_BASE
         self._clean_status()
 
         timer = Timer()
@@ -67,12 +67,12 @@ class ChickenNurse:
 
         if self.debug:
             self.__print_log("%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%")
-            self.additional_sleep_time = OFFSET_SEC__DEBUG
+            self.additional_sleep_time = SUN_OFFSET_SEC__DEBUG
         else:
-            self.additional_sleep_time = OFFSET_SEC
+            self.additional_sleep_time = SUN_OFFSET_SEC
 
         n = self.rtc.datetime()
-        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE
+        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
         self.__write_log_file('w')  # erase exisiting log
 
     def __init__rtc(self):
@@ -133,7 +133,7 @@ class ChickenNurse:
         self.__check_status_and_action(mode)
 
         self.__print_log(
-            f"2- Prochaine {mode} le {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))} {_time}")
+            f"2- Prochaine {mode} le {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))}")
 
         # Sleep......
         self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
@@ -224,9 +224,9 @@ class ChickenNurse:
         self.__print_log("1- debug : NO SUN, manual next step")
         __status = read_status()
         if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
-            return SLEEP_TIME__DEBUG, MODE_OUVERTURE
+            return DEBUG_SLEEP_TIME, MODE_OUVERTURE
         elif __status == STATUS_OPENED or __status == STATUS_OPENING:
-            return SLEEP_TIME__DEBUG, MODE_FERMETURE
+            return DEBUG_SLEEP_TIME, MODE_FERMETURE
 
     def __write_log_file(self, mode: str = 'a'):
         with open(self.log_file, mode) as file:
@@ -255,26 +255,22 @@ class ChickenNurse:
         self.__exec_with_blinking(period=period, callable=open_door)
 
     @staticmethod
-    def __localtime_to_string(n):
-        return f"{n[2]}/{n[1]}/{n[0]} à {n[3]}:{n[4]}:{n[5]}"
-
-    @staticmethod
     def __datetime_to_string(n):
-        return f"{n[2]}/{n[1]}/{n[0]} à {n[4]}:{n[5]}:{n[6]}"
+        return f"{n[2]}/{n[1]}/{n[0]} à {n[4]:02d}:{n[5]:02d}:{n[6]:02d}"
 
     def __deep_sleep(self, seconds: int) -> None:
         time.sleep(1)
         self.led.off()
         delay = 0
-        while (delay + MAX_SLEEP_DURATION) < (seconds * 1000):
-            lightsleep(MAX_SLEEP_DURATION)
-            delay += MAX_SLEEP_DURATION
+        while (delay + MAX_DEEPSLEEP_DURATION) < (seconds * 1000):
+            lightsleep(MAX_DEEPSLEEP_DURATION)
+            delay += MAX_DEEPSLEEP_DURATION
         lightsleep(seconds * 1000 - delay)
         self.__init__rtc()
 
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
-            f"la porte est {read_status()} dodo pendant {seconds}s...\n zzzzzzz\n zzzzzzz\n zzzzzzz")
+            f"la porte est {read_status()} dodo pendant {seconds}s...\n zzzzzzz\n")
         self.__write_log_file()
         if self.use_deep_sleep:  # doesn't work...
             self.__deep_sleep(seconds=seconds)
