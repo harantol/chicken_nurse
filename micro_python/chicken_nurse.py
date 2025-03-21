@@ -23,7 +23,7 @@ TIME_ZONE = 1
 SUN_OFFSET_SEC = 1800  # seconds
 SUN_OFFSET_SEC__DEBUG = 5  # seconds
 DEBUG_SLEEP_TIME = 3  # seconds
-MAX_DEEPSLEEP_DURATION = 71 * 60 * 1000  # milliseconds
+MAX_DEEPSLEEP_DURATION_MS = 71 * 60 * 1000  # milliseconds
 LOGFILE_BASE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
@@ -265,9 +265,9 @@ class ChickenNurse:
         time.sleep(1)
         self.led.off()
         delay = 0
-        while (delay + MAX_DEEPSLEEP_DURATION) < (seconds * 1000):
-            lightsleep(MAX_DEEPSLEEP_DURATION)
-            delay += MAX_DEEPSLEEP_DURATION
+        while (delay + MAX_DEEPSLEEP_DURATION_MS) < (seconds * 1000):
+            lightsleep(MAX_DEEPSLEEP_DURATION_MS)
+            delay += MAX_DEEPSLEEP_DURATION_MS
         lightsleep(seconds * 1000 - delay)
         self.__init__rtc()
 
