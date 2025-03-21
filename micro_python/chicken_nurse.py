@@ -144,8 +144,8 @@ class ChickenNurse:
         self.__toggle_chicken_nurse(mode)
 
         # Attente résiduelle avant
-        self.__print_log(f"4- Additional sleep {2 * self.additional_sleep_time:1.2f}s")
-        self.__sleep(int(2 * self.additional_sleep_time))
+        # self.__print_log(f"4- Additional sleep {2 * self.additional_sleep_time:1.2f}s")
+        # self.__sleep(int(2 * self.additional_sleep_time))
         self.__print_log(f"********* END RUN LOOP *************]")
         self.__write_log_file()
 
