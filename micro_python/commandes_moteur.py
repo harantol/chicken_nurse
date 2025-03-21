@@ -1,7 +1,7 @@
 import time
 from machine import Pin
 
-TIME_UP = 30  # seconds
+TIME_UP = 35  # seconds
 TIME_DOWN = 30  # seconds
 FILENAME = "door_state.txt"
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
