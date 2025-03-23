@@ -3,43 +3,33 @@
 
 import time
 import urtc
-from machine import SoftI2C, Pin
-import ssd1306
+from machine import I2C, Pin, RTC
 
 days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-# Initialize RTC Module
-i2c_rtc = SoftI2C(scl=Pin(5), sda=Pin(4))
-rtc = urtc.DS1307(i2c_rtc)
+# Initialize RTC (connected to I2C)
+i2c = I2C(0, scl=Pin(5), sda=Pin(4))
+rtc = urtc.DS1307(i2c)
+rtc2 = RTC()
+# Set the current time using a specified time tuple
+# Time tupple: (year, month, day, day of week, hour, minute, seconds, milliseconds)
+initial_time = (2024, 1, 30, 1, 12, 31, 3, 0)
 
-# Initialize OLED
-oled_width = 128
-oled_height = 64
-i2c_oled = SoftI2C(scl=Pin(1), sda=Pin(0))
-oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c_oled)
+# Or get the local time from the system
+initial_time_tuple = time.localtime() #tuple (microPython)
+initial_time_seconds = time.mktime(initial_time_tuple) # local time in seconds
+
+# Convert to tuple compatible with the library
+initial_time = urtc.seconds2tuple(initial_time_seconds)
+print(initial_time)
+# Sync the RTC
+rtc.datetime((initial_time[0], initial_time[1],initial_time[2], initial_time[3],initial_time[4], initial_time[5],initial_time[6],initial_time[7]))
+rtc2.datetime((initial_time[0], initial_time[1],initial_time[2], initial_time[3],initial_time[4], initial_time[5],initial_time[6],initial_time[7]))
 
 while True:
-    # Get current time from the RTC
-    current_datetime = rtc.datetime()
+    print('Current date and time:')
+    print(rtc.datetime())
+    print(rtc2.datetime())
+    
 
-    # Format the date and time as strings
-    formatted_date = '{:02d}-{:02d}-{:04d}'.format(current_datetime.day, current_datetime.month, current_datetime.year)
-    formatted_time = '{:02d}:{:02d}:{:02d}'.format(current_datetime.hour, current_datetime.minute,
-                                                   current_datetime.second)
-    formatted_day_week = days_of_week[current_datetime.weekday]
-
-    # Clear the OLED display
-    oled.fill(0)
-
-    # Display the formatted date and time
-    oled.text('Date: ' + formatted_day_week, 0, 0)
-    oled.text(formatted_date, 0, 16)
-    oled.text('Time: ' + formatted_time, 0, 32)
-    oled.show()
-
-    # Print the formatted date and time to the shell
-    print('Formatted date:', formatted_date)
-    print('Formatted time:', formatted_time)
-
-    # Wait for 1 second
     time.sleep(1)
