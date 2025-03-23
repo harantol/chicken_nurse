@@ -1,10 +1,11 @@
 import datetime
 from datetime import date
 
+from gpio_pins import GPIO_RTC_SCL, GPIO_RTC_SDA, GPIO_RTC_SQW
 # import picosleep
 from sun import Sun
 
-from machine import Pin, lightsleep, Timer, I2C, RTC, deepsleep
+from machine import Pin, Timer, I2C, RTC, deepsleep
 import urtc
 import time
 
@@ -27,9 +28,6 @@ MAX_DEEPSLEEP_DURATION_MS = 71 * 60 * 1000  # milliseconds
 LOGFILE_BASE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
-GPIO_RTC_SCL = 5
-GPIO_RTC_SDA = 4
-GPIO_RTC_SQW = 3
 
 
 class ChickenNurse:
