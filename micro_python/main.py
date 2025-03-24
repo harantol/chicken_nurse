@@ -5,7 +5,7 @@ DEBUG: bool = False
 if __name__ == "__main__":
     if not DEBUG:
         try:
-            chik = ChickenNurse(debug=False, use_deep_sleep=True, verbose=True)
+            chik = ChickenNurse(debug=False, use_deep_sleep=False, verbose=True)
             chik.run()
         except:
             print(f'Exception ! open door !')

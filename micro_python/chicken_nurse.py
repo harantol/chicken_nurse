@@ -23,7 +23,7 @@ LATITUDE = 45.343167
 LONGITUDE = 5.586088
 TIME_ZONE = 1
 SUN_OFFSET_SEC = 1800  # seconds
-SUN_OFFSET_SEC__DEBUG = 15  # seconds
+SUN_OFFSET_SEC__DEBUG = 5  # seconds
 DEBUG_SLEEP_TIME = 5  # seconds
 MAX_DEEPSLEEP_DURATION_MS = 71 * 60 * 1000  # milliseconds
 LOGFILE_BASE = "chicken.log"
@@ -347,7 +347,8 @@ class ChickenNurse:
     def __deep_sleep(self, seconds: int) -> None:
         self.led.off()
         if self.verbose:
-            self.__print_log("DEEPSLEEP NOW !")
+            self.__print_log(f"DEEPSLEEP NOW !")
+            self.__print_log(f"alarm {self.alarm_time} !")
         deepsleep()
 
     def __sleep(self, seconds: int) -> None:
