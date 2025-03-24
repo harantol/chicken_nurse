@@ -12,6 +12,7 @@ import time
 from commandes_moteur import STATUS_CLOSING, STATUS_OPENING, STATUS_CLOSED, STATUS_OPENED, open_door, close_door, stop, \
     read_status
 import wlan_connection
+from oled import OLED
 from local_time import set_local_time
 
 # parameters :
@@ -22,7 +23,7 @@ LATITUDE = 45.343167
 LONGITUDE = 5.586088
 TIME_ZONE = 1
 SUN_OFFSET_SEC = 1800  # seconds
-SUN_OFFSET_SEC__DEBUG = 5  # seconds
+SUN_OFFSET_SEC__DEBUG = 15  # seconds
 DEBUG_SLEEP_TIME = 5  # seconds
 MAX_DEEPSLEEP_DURATION_MS = 71 * 60 * 1000  # milliseconds
 LOGFILE_BASE = "chicken.log"
@@ -42,6 +43,10 @@ class ChickenNurse:
         self.verbose = verbose
         self.log_txt = ""
 
+        self._oled = None
+        
+        self.__init_oled()
+            
         self.led = Pin("LED", Pin.OUT)
         self.led.on()
 
@@ -62,10 +67,15 @@ class ChickenNurse:
         timer = Timer()
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         try:
-            self.__init_clock()
+            if self.rtc.datetime().year == 2000:
+                self.__init_clock(max_tries=100)
+            else:
+                self.__init_clock()
         except RuntimeError as e:
             self.__print_log(str(e))
             self.__print_log(f"FAIL Set local time.")
+            if self.rtc.datetime().year == 2000:
+                raise RuntimeError("FAIL Set local time and time has never been set !")
             pass
         timer.deinit()
 
@@ -77,6 +87,15 @@ class ChickenNurse:
         else:
             self.additional_sleep_time = SUN_OFFSET_SEC
 
+    def __init_oled(self):
+        try:
+            self._oled = OLED()
+            self.log_txt += 'SCREEN OK\n'
+            self.print_('SCREEN OK')
+        except OSError:
+            self.log_txt += 'NO SCREEN\n'
+            self.print_('NO SCREEN')
+            self._oled = None
     def __init_log_file(self):
         n = self.rtc.datetime()
         self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
@@ -95,14 +114,14 @@ class ChickenNurse:
             self.rtc = RTC()
             self.__print_log(f'RTC ERROR')
 
-    def __init_clock(self):
+    def __init_clock(self, max_tries: int = 10):
         if self.rtc is None:
             self.__init__rtc()
-        self.__print_log(f"WIFI connexion......")
+        self.__print_log(f"WIFI connexion")
         wlan = wlan_connection.connnect(verbose=True)
-        self.__print_log(f"WIFI connexion OK.")
-        self.__print_log(f"Set local time ...")
-        time_tuple, delta_sec = set_local_time()
+        self.__print_log(f"WIFI OK.")
+        self.__print_log(f"Set local time")
+        time_tuple, delta_sec = set_local_time(max_tries=max_tries)
         # (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
         self.time_zone = int(delta_sec / 3600)
         initial_time_seconds = time.mktime(time_tuple)  # local time in seconds
@@ -132,8 +151,8 @@ class ChickenNurse:
                                    minute=_raw_time[5],
                                    second=_raw_time[6],
                                    millisecond=_raw_time[7])
-        self.__print_log(f"********* RUN LOOP *************")
-        self.__print_log(f"0- la porte est {read_status()}")
+        self.__print_log(f"RUN LOOP")
+        self.__print_log(f"door {read_status()}")
 
         # Compute sleep duration time:
         _sleep_time = self.__compute_sunwait_and_sleep_time(loc_time_tuple=_time)
@@ -143,10 +162,10 @@ class ChickenNurse:
         self.__check_status_and_action()
 
         self.__print_log(
-            f"2- Prochaine {self.next_mode} le {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))}")
+            f"next {self.next_mode}: {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))}")
 
         # Sleep......
-        self.__print_log(f"3- Sleep {_sleep_time:1.2f}s....")
+        self.__print_log(f"Sleep {_sleep_time:1.2f}s....")
         self.__sleep(_sleep_time)
 
         # Code a priori inaccessible en mode deep sleep:
@@ -154,7 +173,7 @@ class ChickenNurse:
             self.__print_log(f"!!!!!!!!!!!!!!! MODE DEEP SLEEP CODE INACCESSIBLE")
         self.led.on()
         self.__print_log(
-            f"C'est l'heure ! la porte est {read_status()} {self.next_mode}")
+            f"C'est l'heure ! door {read_status()} {self.next_mode}")
         self.__write_log_file()
 
         # ACTION ouverture ou fermeture :
@@ -167,12 +186,14 @@ class ChickenNurse:
         self.__write_log_file()
 
     def __print_log(self, text):
+        if self._oled is not None:
+            self._oled.print(text)
         text = (self.__datetime_to_string(self.rtc.datetime()) + " || " + text)
         self.print_(text)
         self.log_txt += text + '\n'
 
     def _stop_door(self):
-        self.__print_log('STOP...')
+        self.__print_log('STOP.')
         stop()
 
     def quit(self):
@@ -216,14 +237,14 @@ class ChickenNurse:
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
-            __text = (f"1- il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
+            __text = (f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
                       f" à {today_sunrise_time_tuple}")
             self.next_mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
             raw_sleep_time = sunset_time - cur_time
             sleep_time_s = raw_sleep_time + self.additional_sleep_time
-            __text = f"1- Le soleil va se coucher dans {raw_sleep_time}s à {today_sunset_time_tuple}"
+            __text = f"Le soleil va se coucher dans {raw_sleep_time}s à {today_sunset_time_tuple}"
             self.next_mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
             tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
@@ -231,7 +252,7 @@ class ChickenNurse:
             sunrise_time = time.mktime(tomorrow_sunrise_time_tuple + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
-            __text = f"1- il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin à {tomorrow_sunrise_time_tuple}"
+            __text = f"il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin à {tomorrow_sunrise_time_tuple}"
             self.next_mode = MODE_OUVERTURE
         self.__print_log(__text)
         if sleep_time_s < 0:
@@ -243,11 +264,11 @@ class ChickenNurse:
 
     # Callback for handling alarm interrupt.
     def on_alarm(self):
-        self.__print_log("Interrupt detected.")
+        self.__print_log("Interrupt")
 
         if self.rtc.alarm(alarm=0):  # Check if Alarm 1 triggered
             if self.verbose:
-                self.__print_log("Alarm 1 triggered.")
+                self.__print_log("Alarm 1 trig.")
             self.rtc.alarm(False, alarm=0)  # Clear Alarm 1 flag
 
     # Setup alarms on the DS3231
@@ -274,10 +295,11 @@ class ChickenNurse:
         # Enable interrupts for the alarms
         self.rtc.interrupt(0)
         if self.verbose:
-            self.__print_log(f"Alarm set successfully à {self.__datetime_to_string(self.alarm_time)}.")
+            self.__print_log(f"Alarm set OK")
+            self.__print_log(f"{self.__datetime_to_string(self.alarm_time)}.")
 
     def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple):
-        self.__print_log("1- debug : NO SUN, manual next step")
+        self.__print_log("debug : NO SUN, manual next step")
         __status = read_status()
         self.setup_alarms(sleep_time_s=DEBUG_SLEEP_TIME, cur_time=urtc.tuple2seconds(loc_time_tuple))
 
@@ -320,7 +342,7 @@ class ChickenNurse:
 
     @staticmethod
     def __datetime_to_string(n):
-        return f"{n[2]}/{n[1]}/{n[0]} à {n[4]:02d}:{n[5]:02d}:{n[6]:02d}"
+        return f"{n[2]}/{n[1]}/{n[0]} {n[4]:02d}:{n[5]:02d}:{n[6]:02d}"
 
     def __deep_sleep(self, seconds: int) -> None:
         self.led.off()
@@ -330,7 +352,7 @@ class ChickenNurse:
 
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
-            f"la porte est {read_status()} dodo pendant {seconds}s...\n zzzzzzz\n")
+            f"door {read_status()}, {seconds}s dodo..\n zzzzzzz\n")
         self.__write_log_file()
         if self.use_deep_sleep:  # doesn't work...
             self.__deep_sleep(seconds=seconds)
