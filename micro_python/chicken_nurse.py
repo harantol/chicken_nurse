@@ -68,6 +68,7 @@ class ChickenNurse:
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         try:
             if self.rtc.datetime().year == 2000:
+                print("first time set")
                 self.__init_clock(max_tries=100)
             else:
                 self.__init_clock()
@@ -111,8 +112,8 @@ class ChickenNurse:
             self.sqw_pin.irq(trigger=Pin.IRQ_FALLING, handler=self.__run_loop)
             self.__print_log('RTC OK')
         except OSError as e:
-            self.rtc = RTC()
             self.__print_log(f'RTC ERROR')
+            raise OSError(f'RTC ERROR: {e}')
 
     def __init_clock(self, max_tries: int = 10):
         if self.rtc is None:
