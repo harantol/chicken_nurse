@@ -38,28 +38,27 @@ class ChickenNurse:
                  verbose: bool = False) -> None:
 
         self.use_deep_sleep = use_deep_sleep
+        self.log_file = LOGFILE_BASE
         self.debug = debug
         self.next_mode = None
         self.verbose = verbose
         self.log_txt = ""
 
         self._oled = None
-        
+
         self.__init_oled()
-            
+
         self.led = Pin("LED", Pin.OUT)
         self.led.on()
 
         # DS3231 rtc init
         self.alarm_time: urtc.seconds2tuple = None
         self.rtc = None
-        self.sqw_pin = None
         self.__init__rtc()
 
         self.__init_log_file()
 
         self.time_zone = TIME_ZONE
-        self.log_file = LOGFILE_BASE
 
         self._stop_door()
 
@@ -97,19 +96,20 @@ class ChickenNurse:
             self.log_txt += 'NO SCREEN\n'
             self.print_('NO SCREEN')
             self._oled = None
+
     def __init_log_file(self):
-        n = self.rtc.datetime()
-        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
         self.__write_log_file('w')  # erase exisiting log
 
     def __init__rtc(self) -> None:
         try:
             i2c_rtc = I2C(0, scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA))
-            self.sqw_pin = Pin(GPIO_RTC_SQW, Pin.IN, Pin.PULL_UP)
+
             self.rtc = urtc.DS3231(i2c_rtc)
             self.rtc.datetime()
             # Attach the interrupt callback
-            self.sqw_pin.irq(trigger=Pin.IRQ_FALLING, handler=self.__run_loop)
+            if self.use_deep_sleep:
+                sqw_pin = Pin(GPIO_RTC_SQW, Pin.IN, Pin.PULL_UP)
+                sqw_pin.irq(trigger=Pin.IRQ_FALLING, handler=self.__run_loop)
             self.__print_log('RTC OK')
         except OSError as e:
             self.__print_log(f'RTC ERROR')
@@ -259,8 +259,8 @@ class ChickenNurse:
         if sleep_time_s < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
-
-        self.setup_alarms(sleep_time_s=sleep_time_s, cur_time=cur_time)
+        if self.use_deep_sleep:
+            self.setup_alarms(sleep_time_s=sleep_time_s, cur_time=cur_time)
         return sleep_time_s
 
     # Callback for handling alarm interrupt.
@@ -302,7 +302,8 @@ class ChickenNurse:
     def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple):
         self.__print_log("debug : NO SUN, manual next step")
         __status = read_status()
-        self.setup_alarms(sleep_time_s=DEBUG_SLEEP_TIME, cur_time=urtc.tuple2seconds(loc_time_tuple))
+        if self.use_deep_sleep:
+            self.setup_alarms(sleep_time_s=DEBUG_SLEEP_TIME, cur_time=urtc.tuple2seconds(loc_time_tuple))
 
         if __status == STATUS_CLOSED or __status == STATUS_CLOSING:
             self.next_mode = MODE_OUVERTURE
