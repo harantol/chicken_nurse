@@ -1,21 +1,21 @@
 import time
 from machine import Pin
 
+from gpio_pins import GPIO_FORWARD_LEFT_PIN, GPIO_REVERSE_LEFT_PIN
+
 TIME_UP = 35  # seconds
 TIME_DOWN = 30  # seconds
 FILENAME = "door_state.txt"
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
 # Motor A, Left Side GPIO CONSTANTS
-PWM_FORWARD_LEFT_PIN = 15  # IN1 - Forward Drive
-PWM_REVERSE_LEFT_PIN = 14  # IN2 - Reverse Drive
 STATUS_CLOSED = "Closed"
 STATUS_OPENED = "Opened"
 STATUS_CLOSING = "Closing"
 STATUS_OPENING = "Opening"
 STATUS_NO_FILE = "No file"
 
-p0 = Pin(PWM_FORWARD_LEFT_PIN, Pin.OUT)
-p1 = Pin(PWM_REVERSE_LEFT_PIN, Pin.OUT)
+p0 = Pin(GPIO_FORWARD_LEFT_PIN, Pin.OUT)
+p1 = Pin(GPIO_REVERSE_LEFT_PIN, Pin.OUT)
 
 
 def open_door():
