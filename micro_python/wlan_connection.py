@@ -34,7 +34,7 @@ def connnect(verbose=True) -> network.WLAN:
                 print(f'waiting for connection {wait}/{wait_max}')
             time.sleep(1)
     if wlan.status() != 3:
-        raise RuntimeError('wifi connexion failed')
+        raise RuntimeError('wifi NOK')
     else:
         if verbose:
             print('connected')
