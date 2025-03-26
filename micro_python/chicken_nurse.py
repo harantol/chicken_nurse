@@ -38,7 +38,7 @@ class ChickenNurse:
                  verbose: bool = False) -> None:
 
         self.use_deep_sleep = use_deep_sleep
-        self.log_file = LOGFILE_BASE
+        self.log_file = None
         self.debug = debug
         self.next_mode = None
         self.verbose = verbose
@@ -98,6 +98,8 @@ class ChickenNurse:
             self._oled = None
 
     def __init_log_file(self):
+        n = self.rtc.datetime()
+        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
         self.__write_log_file('w')  # erase exisiting log
 
     def __init__rtc(self) -> None:
