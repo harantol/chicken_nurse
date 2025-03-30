@@ -4,7 +4,7 @@ from machine import Pin
 from gpio_pins import GPIO_FORWARD_LEFT_PIN, GPIO_REVERSE_LEFT_PIN
 
 TIME_UP = 35  # seconds
-TIME_DOWN = 30  # seconds
+TIME_DOWN = 27  # seconds
 FILENAME = "door_state.txt"
 # ///////////////// Define Motor Driver GPIO Pins /////////////////
 # Motor A, Left Side GPIO CONSTANTS
