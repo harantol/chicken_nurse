@@ -8,9 +8,9 @@ from machine import I2C, Pin, RTC
 days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 # Initialize RTC (connected to I2C)
-i2c = I2C(0, scl=Pin(5), sda=Pin(4))
-rtc = urtc.DS1307(i2c)
-rtc2 = RTC()
+from gpio_pins import GPIO_RTC_SCL, GPIO_RTC_SDA
+i2c = I2C(0, scl=Pin(GPIO_RTC_SCL), sda=Pin(GPIO_RTC_SDA))
+rtc = urtc.DS3231(i2c)
 # Set the current time using a specified time tuple
 # Time tupple: (year, month, day, day of week, hour, minute, seconds, milliseconds)
 initial_time = (2024, 1, 30, 1, 12, 31, 3, 0)
