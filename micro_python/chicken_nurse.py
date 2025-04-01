@@ -66,8 +66,8 @@ class ChickenNurse:
         timer = Timer()
         timer.init(period=BLINK_INIT, mode=Timer.PERIODIC, callback=self.__blink)
         try:
-            if self.rtc.datetime().year == 2000:
-                print("first time set")
+            if self.rtc.lost_power():
+                print("RTC lost power !")
                 self.__init_clock(max_tries=100)
             else:
                 self.__init_clock()
