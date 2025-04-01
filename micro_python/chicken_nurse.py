@@ -196,7 +196,7 @@ class ChickenNurse:
         self.log_txt += text + '\n'
 
     def _stop_door(self):
-        self.__print_log('STOP.')
+        self.__print_log(f'STOP. Door looks {read_status()}.')
         stop()
 
     def quit(self):
