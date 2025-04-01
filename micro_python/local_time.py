@@ -31,7 +31,7 @@ def get_local_time_from_the_web() -> (time.localtime, int):
         # parsed['raw_offset']: timezone hour offset
         # 946684800: unixtime of 2020/01/01 00:00:00 (system start time on MicroPython)
         # generate datetime tuple based on these information
-        return time.localtime(parsed['unixtime'] + parsed['raw_offset']), parsed[
+        return time.localtime(parsed['unixtime'] + parsed['raw_offset'] + parsed['dst_offset']), parsed[
             'raw_offset']  # -> (tm_year,tm_mon,tm_mday,tm_hour,tm_min, tm_sec,tm_wday,tm_yday,tm_isdst)
         # rtc.datetime((year, month, day, weekday, hour, minute, second, microsecond))
     else:
