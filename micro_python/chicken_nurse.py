@@ -1,4 +1,5 @@
 import datetime
+import os
 from datetime import date
 
 from gpio_pins import GPIO_RTC_SCL, GPIO_RTC_SDA, GPIO_RTC_SQW
@@ -43,6 +44,7 @@ class ChickenNurse:
         self.next_mode = None
         self.verbose = verbose
         self.log_txt = ""
+        self.log_is_init: bool = False
 
         self._oled = None
 
@@ -101,6 +103,7 @@ class ChickenNurse:
         n = self.rtc.datetime()
         self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
         self.__write_log_file('w')  # erase exisiting log
+        self.log_is_init = True
 
     def __init__rtc(self) -> None:
         try:
@@ -177,7 +180,6 @@ class ChickenNurse:
         self.led.on()
         self.__print_log(
             f"C'est l'heure ! door {read_status()} {self.next_mode}")
-        self.__write_log_file()
 
         # ACTION ouverture ou fermeture :
         self.__toggle_chicken_nurse(self.next_mode)
@@ -186,7 +188,6 @@ class ChickenNurse:
         # self.__print_log(f"4- Additional sleep {2 * self.additional_sleep_time:1.2f}s")
         # self.__sleep(int(2 * self.additional_sleep_time))
         self.__print_log(f"********* END RUN LOOP *************]")
-        self.__write_log_file()
 
     def __print_log(self, text):
         if self._oled is not None:
@@ -194,6 +195,7 @@ class ChickenNurse:
         text = (self.__datetime_to_string(self.rtc.datetime()) + " || " + text)
         self.print_(text)
         self.log_txt += text + '\n'
+        self.__write_log_file()
 
     def _stop_door(self):
         self.__print_log(f'STOP. Door looks {read_status()}.')
@@ -315,6 +317,8 @@ class ChickenNurse:
             return DEBUG_SLEEP_TIME
 
     def __write_log_file(self, mode: str = 'a'):
+        if not self.log_is_init:
+            return
         with open(self.log_file, mode) as file:
             file.write(self.log_txt)
             self.log_txt = ""
@@ -339,10 +343,14 @@ class ChickenNurse:
             raise ValueError(f"{mode} is unknown")
 
     def __close_door(self):
+        self.__print_log('Close the door...')
         self.__exec_with_blinking(period=BLINK_CLOSING, callable=close_door)
+        self.__print_log('OK')
 
     def __open_door(self, period: int = BLINK_OPENING):
+        self.__print_log('Open the door...')
         self.__exec_with_blinking(period=period, callable=open_door)
+        self.__print_log('OK')
 
     @staticmethod
     def __datetime_to_string(n):
@@ -358,7 +366,6 @@ class ChickenNurse:
     def __sleep(self, seconds: int) -> None:
         self.__print_log(
             f"door {read_status()}, {seconds}s dodo..\n zzzzzzz\n")
-        self.__write_log_file()
         if self.use_deep_sleep:  # doesn't work...
             self.__deep_sleep(seconds=seconds)
         else:
