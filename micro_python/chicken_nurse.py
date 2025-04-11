@@ -1,7 +1,4 @@
-import datetime
 import os
-from datetime import date
-
 from gpio_pins import GPIO_RTC_SCL, GPIO_RTC_SDA, GPIO_RTC_SQW
 # import picosleep
 from sun import Sun
@@ -30,7 +27,6 @@ MAX_DEEPSLEEP_DURATION_MS = 71 * 60 * 1000  # milliseconds
 LOGFILE_BASE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
-
 
 class ChickenNurse:
     def __init__(self,
@@ -167,8 +163,9 @@ class ChickenNurse:
 
         self.__check_status_and_action()
 
-        self.__print_log(
-            f"next {self.next_mode}: {self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + urtc.tuple2seconds(_time)))}")
+        __cur_sec = urtc.tuple2seconds(_time)
+        __str_var = self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + __cur_sec))
+        self.__print_log(f"next {self.next_mode}: {__str_var}")
 
         # Sleep......
         self.__print_log(f"Sleep {_sleep_time:1.2f}s....")
@@ -242,8 +239,7 @@ class ChickenNurse:
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
-            __text = (f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure"
-                      f" à {today_sunrise_time_tuple}")
+            __text = (f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure à {today_sunrise_time_tuple}")
             self.next_mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
@@ -252,8 +248,9 @@ class ChickenNurse:
             __text = f"Le soleil va se coucher dans {raw_sleep_time}s à {today_sunset_time_tuple}"
             self.next_mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
-            tomorrow = date.fromtimestamp(cur_time) + datetime.timedelta(days=1)
-            tomorrow_sunrise_time_tuple = self.sun_wait.get_sunrise_time(tomorrow.tuple() + (0, 0))
+            tomorow_list = list(loc_time_tuple)
+            tomorow_list[2]+=1
+            tomorrow_sunrise_time_tuple = self.sun_wait.get_sunrise_time(tuple(tomorow_list) + (0, 0))
             sunrise_time = time.mktime(tomorrow_sunrise_time_tuple + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
@@ -303,7 +300,7 @@ class ChickenNurse:
             self.__print_log(f"Alarm set OK")
             self.__print_log(f"{self.__datetime_to_string(self.alarm_time)}.")
 
-    def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple):
+    def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple)->int:
         self.__print_log("debug : NO SUN, manual next step")
         __status = read_status()
         if self.use_deep_sleep:
@@ -315,6 +312,9 @@ class ChickenNurse:
         elif __status == STATUS_OPENED or __status == STATUS_OPENING:
             self.next_mode = MODE_FERMETURE
             return DEBUG_SLEEP_TIME
+        else:
+            self.__print_log("Impossible de lire le statut : no wait until next step !")
+            return 0
 
     def __write_log_file(self, mode: str = 'a'):
         if not self.log_is_init:
@@ -343,14 +343,10 @@ class ChickenNurse:
             raise ValueError(f"{mode} is unknown")
 
     def __close_door(self):
-        self.__print_log('Close the door...')
         self.__exec_with_blinking(period=BLINK_CLOSING, callable=close_door)
-        self.__print_log('OK')
 
     def __open_door(self, period: int = BLINK_OPENING):
-        self.__print_log('Open the door...')
         self.__exec_with_blinking(period=period, callable=open_door)
-        self.__print_log('OK')
 
     @staticmethod
     def __datetime_to_string(n):
