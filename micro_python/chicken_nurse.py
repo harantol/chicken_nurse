@@ -178,6 +178,8 @@ class ChickenNurse:
         self.__print_log(f"********* END RUN LOOP *************]")
 
     def __print_log(self, text):
+        if not self.verbose:
+            return
         if self._oled is not None:
             self._oled.print(text)
         text = (self.__datetime_to_string(self.rtc.datetime()) + " || " + text)
@@ -201,9 +203,9 @@ class ChickenNurse:
     def __check_status_and_action(self):
         __status = read_status()
         if self.next_mode == MODE_OUVERTURE and __status != STATUS_CLOSED:
-            if __status == STATUS_OPENING:
-                self.__open_door()  # if door was opening, finish it before closing. Else rope may reach over end !!
-            self.__close_door()  # La porte ne devrait pas être ouverte !
+            if __status != STATUS_OPENED:
+                self.__open_door()  # if door was not fully opened, finish it before closing. Else rope may reach over end !!
+            self.__close_door()  # La porte devrait être fermée !
         elif self.next_mode == MODE_FERMETURE and __status != STATUS_OPENED:
             self.__open_door()  # La porte ne devrait pas être fermée !
 
