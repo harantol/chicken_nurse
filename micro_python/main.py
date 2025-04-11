@@ -11,11 +11,12 @@ if __name__ == "__main__":
                 chik.run()
             except:
                 t = RTC().datetime()
-                with open(f"exception_{t}.txt", "w") as file:
-                    file.write('Exception ! open door !')
+                with open(f"exception.txt", "a") as file:
+                    file.write(f'{t} Exception ! open door !')
                 print(f'Exception ! open door !')
                 open_door()
     else:
         chik = ChickenNurse(debug=True, use_deep_sleep=False, verbose=True)
         chik.run()
+
 
