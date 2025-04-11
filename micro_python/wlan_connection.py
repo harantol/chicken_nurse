@@ -12,7 +12,6 @@ def disconnect(wlan: network.WLAN):
 
 def connnect(verbose=True) -> network.WLAN:
     ssid_pwd: [str, str] = [
-        ("Sosh", "PTit3F33"),
         ("TitFeeTel", "Montagne09!")
     ]
     wlan = network.WLAN(network.STA_IF)
