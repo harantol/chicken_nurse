@@ -35,12 +35,11 @@ class ChickenNurse:
                  verbose: bool = False) -> None:
 
         self.use_deep_sleep = use_deep_sleep
-        self.log_file = None
+        self.log_file = LOGFILE_BASE
         self.debug = debug
         self.next_mode = None
         self.verbose = verbose
         self.log_txt = ""
-        self.log_is_init: bool = False
 
         self._oled = None
 
@@ -53,8 +52,6 @@ class ChickenNurse:
         self.alarm_time: urtc.seconds2tuple = None
         self.rtc = None
         self.__init__rtc()
-
-        self.__init_log_file()
 
         self.time_zone = TIME_ZONE
 
@@ -94,12 +91,6 @@ class ChickenNurse:
             self.log_txt += 'NO SCREEN\n'
             self.print_('NO SCREEN')
             self._oled = None
-
-    def __init_log_file(self):
-        n = self.rtc.datetime()
-        self.log_file = f"{n[2]}_{n[1]}_{n[0]}__{n[4]}_{n[5]}_{n[6]}_" + LOGFILE_BASE
-        self.__write_log_file('w')  # erase exisiting log
-        self.log_is_init = True
 
     def __init__rtc(self) -> None:
         try:
@@ -316,10 +307,8 @@ class ChickenNurse:
             self.__print_log("Impossible de lire le statut : no wait until next step !")
             return 0
 
-    def __write_log_file(self, mode: str = 'a'):
-        if not self.log_is_init:
-            return
-        with open(self.log_file, mode) as file:
+    def __write_log_file(self):
+        with open(self.log_file, 'a') as file:
             file.write(self.log_txt)
             self.log_txt = ""
 
