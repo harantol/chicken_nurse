@@ -33,13 +33,15 @@ class ChickenNurse:
     def __init__(self,
                  debug: bool = False,
                  use_deep_sleep: bool = True,
-                 verbose: bool = False) -> None:
+                 verbose: bool = True,
+                 full_verbose: bool = False) -> None:
 
         self.use_deep_sleep = use_deep_sleep
         self.log_file = LOGFILE_BASE
         self.debug = debug
         self.next_mode = None
         self.verbose = verbose
+        self.full_verbose = full_verbose
         self.log_txt = ""
 
         self._oled = None
@@ -145,8 +147,9 @@ class ChickenNurse:
                                    minute=_raw_time[5],
                                    second=_raw_time[6],
                                    millisecond=_raw_time[7])
-        self.__print_log(f"RUN LOOP")
-        self.__print_log(f"door {read_status()}")
+        if self.full_verbose:
+            self.__print_log(f"RUN LOOP")
+            self.__print_log(f"door {read_status()}")
 
         # Compute sleep duration time:
         _sleep_time = self.__compute_sunwait_and_sleep_time(loc_time_tuple=_time)
@@ -157,18 +160,19 @@ class ChickenNurse:
 
         __cur_sec = urtc.tuple2seconds(_time)
         __str_var = self.__datetime_to_string(urtc.seconds2tuple(_sleep_time + __cur_sec))
-        self.__print_log(f"next {self.next_mode}: {__str_var}")
+        if self.full_verbose:
+            self.__print_log(f"next {self.next_mode}: {__str_var}")
 
-        # Sleep......
-        self.__print_log(f"Sleep {_sleep_time:1.2f}s....")
+            # Sleep......
+            self.__print_log(f"Sleep {_sleep_time:1.2f}s....")
         self.__sleep(_sleep_time)
 
         # Code a priori inaccessible en mode deep sleep:
         if self.use_deep_sleep:
             self.__print_log(f"!!!!!!!!!!!!!!! MODE DEEP SLEEP CODE INACCESSIBLE")
         self.led.on()
-        self.__print_log(
-            f"C'est l'heure ! door {read_status()} {self.next_mode}")
+        if self.full_verbose:
+            self.__print_log(f"C'est l'heure ! door {read_status()} {self.next_mode}")
 
         # ACTION ouverture ou fermeture :
         self.__toggle_chicken_nurse(self.next_mode)
@@ -176,7 +180,8 @@ class ChickenNurse:
         # Attente résiduelle avant
         # self.__print_log(f"4- Additional sleep {2 * self.additional_sleep_time:1.2f}s")
         # self.__sleep(int(2 * self.additional_sleep_time))
-        self.__print_log(f"********* END RUN LOOP *************]")
+        if self.full_verbose:
+            self.__print_log(f"********* END RUN LOOP *************]")
 
     def __print_log(self, text):
         if not self.verbose:
@@ -189,7 +194,8 @@ class ChickenNurse:
         self.__write_log_file()
 
     def _stop_door(self):
-        self.__print_log(f'STOP. Door looks {read_status()}.')
+        if self.full_verbose:
+            self.__print_log(f'STOP. Door looks {read_status()}.')
         stop()
 
     def quit(self):
@@ -251,7 +257,8 @@ class ChickenNurse:
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
             __text = f"il est tard et {raw_sleep_time}s avant le lever du soleil de demain matin à {tomorrow_sunrise_time_tuple}"
             self.next_mode = MODE_OUVERTURE
-        self.__print_log(__text)
+        if self.full_verbose:
+            self.__print_log(__text)
         if sleep_time_s < 0:
             self.log_txt += "ValueError : Sleep time is < 0 !\n"
             raise ValueError("Sleep time is < 0 !")
@@ -264,7 +271,7 @@ class ChickenNurse:
         self.__print_log("Interrupt")
 
         if self.rtc.alarm(alarm=0):  # Check if Alarm 1 triggered
-            if self.verbose:
+            if self.full_verbose:
                 self.__print_log("Alarm 1 trig.")
             self.rtc.alarm(False, alarm=0)  # Clear Alarm 1 flag
 
@@ -291,7 +298,7 @@ class ChickenNurse:
 
         # Enable interrupts for the alarms
         self.rtc.interrupt(0)
-        if self.verbose:
+        if self.full_verbose:
             self.__print_log(f"Alarm set OK")
             self.__print_log(f"{self.__datetime_to_string(self.alarm_time)}.")
 
@@ -321,17 +328,13 @@ class ChickenNurse:
 
     def __toggle_chicken_nurse(self, mode):
         if mode == MODE_FERMETURE:
-            if self.verbose:
-                self.__print_log(f"door is {read_status()} : now closing...")
+            self.__print_log(f"door is {read_status()} : now closing...")
             self.__close_door()
-            if self.verbose:
-                self.__print_log(f"door {read_status()}.")
+            self.__print_log(f"door {read_status()}.")
         elif mode == MODE_OUVERTURE:
-            if self.verbose:
-                self.__print_log(f"door is {read_status()} : now opening...")
+            self.__print_log(f"door is {read_status()} : now opening...")
             self.__open_door()
-            if self.verbose:
-                self.__print_log(f"door {read_status()}.")
+            self.__print_log(f"door {read_status()}.")
         else:
             raise ValueError(f"{mode} is unknown")
 
@@ -347,14 +350,15 @@ class ChickenNurse:
 
     def __deep_sleep(self, seconds: int) -> None:
         self.led.off()
-        if self.verbose:
+        if self.full_verbose:
             self.__print_log(f"DEEPSLEEP NOW !")
             self.__print_log(f"alarm {self.alarm_time} !")
         deepsleep()
 
     def __sleep(self, seconds: int) -> None:
-        self.__print_log(
-            f"door {read_status()}, {seconds}s dodo..\n zzzzzzz\n")
+        if self.full_verbose:
+            self.__print_log(
+                f"door {read_status()}, {seconds}s dodo..\n zzzzzzz\n")
         if self.use_deep_sleep:  # doesn't work...
             self.__deep_sleep(seconds=seconds)
         else:
