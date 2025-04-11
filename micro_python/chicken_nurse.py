@@ -28,6 +28,7 @@ LOGFILE_BASE = "chicken.log"
 MODE_OUVERTURE = "Ouverture"
 MODE_FERMETURE = "Fermetrue"
 
+
 class ChickenNurse:
     def __init__(self,
                  debug: bool = False,
@@ -232,7 +233,8 @@ class ChickenNurse:
         if cur_time - sunrise_time < 0:  # Avant le lever du soleil
             raw_sleep_time = sunrise_time - cur_time
             sleep_time_s = raw_sleep_time - self.additional_sleep_time
-            __text = (f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure à {today_sunrise_time_tuple}")
+            __text = (
+                f"il est tôt et {raw_sleep_time}s avant le lever du soleil de tout à l'heure à {today_sunrise_time_tuple}")
             self.next_mode = MODE_OUVERTURE
             # Lever de demain
         elif (cur_time - sunset_time) < 0:  # Avant le coucher du soleil
@@ -242,7 +244,7 @@ class ChickenNurse:
             self.next_mode = MODE_FERMETURE
         else:  # Après le coucher du soleil
             tomorow_list = list(loc_time_tuple)
-            tomorow_list[2]+=1
+            tomorow_list[2] += 1
             tomorrow_sunrise_time_tuple = self.sun_wait.get_sunrise_time(tuple(tomorow_list) + (0, 0))
             sunrise_time = time.mktime(tomorrow_sunrise_time_tuple + (0, 0, 0))
             raw_sleep_time = sunrise_time - cur_time
@@ -293,7 +295,7 @@ class ChickenNurse:
             self.__print_log(f"Alarm set OK")
             self.__print_log(f"{self.__datetime_to_string(self.alarm_time)}.")
 
-    def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple)->int:
+    def __get_next_step_and_time__debug(self, loc_time_tuple: urtc.DateTimeTuple) -> int:
         self.__print_log("debug : NO SUN, manual next step")
         __status = read_status()
         if self.use_deep_sleep:
