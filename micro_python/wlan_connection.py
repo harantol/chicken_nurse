@@ -12,7 +12,8 @@ def disconnect(wlan: network.WLAN):
 
 def connnect(verbose=True) -> network.WLAN:
     ssid_pwd: [str, str] = [
-        ("TitFeeTel", "Montagne09!")
+        ("TitFeeTel", "Montagne09!"),
+        ("Sosh", "Tit3F33")
     ]
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
@@ -34,7 +35,7 @@ def connnect(verbose=True) -> network.WLAN:
                 print(f'waiting for connection {wait}/{wait_max}')
             time.sleep(1)
     if wlan.status() != 3:
-        raise RuntimeError('wifi connexion failed')
+        raise RuntimeError('wifi NOK')
     else:
         if verbose:
             print('connected')
@@ -54,3 +55,4 @@ def debug_wlan_connection(ssid_pwd=[
     print('IP: ', wlan.ifconfig()[0])
     r = requests.get(www)
     print(r.content)
+
